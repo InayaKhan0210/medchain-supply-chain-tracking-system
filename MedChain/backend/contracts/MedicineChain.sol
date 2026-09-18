@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 contract MedicineChain {
     struct Medicine {
+        string medicineId;
         string name;
         string manufacturer;
         uint256 manufacturingDate;
@@ -32,6 +33,7 @@ contract MedicineChain {
     }
 
     mapping(string => Medicine) public medicines;
+    mapping(string => string) public medicineIdToBatch;
     mapping(string => SupplyChainEvent[]) public medicineHistory;
     mapping(address => bool) public authorizedManufacturers;
     mapping(address => bool) public authorizedDistributors;
@@ -98,6 +100,7 @@ contract MedicineChain {
     }
 
     function registerMedicine(
+        string memory medicineId,
         string memory name,
         string memory manufacturer,
         uint256 manufacturingDate,
@@ -106,11 +109,14 @@ contract MedicineChain {
         string memory initialLocation
     ) public onlyAuthorizedManufacturer {
         require(!medicines[batchNumber].isRegistered, "Medicine already registered");
+        require(bytes(medicineId).length > 0, "Medicine ID required");
+        require(bytes(medicineIdToBatch[medicineId]).length == 0, "Medicine ID already registered");
         require(manufacturingDate < expiryDate, "Invalid dates");
         require(bytes(name).length > 0, "Name required");
         require(bytes(batchNumber).length > 0, "Batch number required");
 
         medicines[batchNumber] = Medicine({
+            medicineId: medicineId,
             name: name,
             manufacturer: manufacturer,
             manufacturingDate: manufacturingDate,
@@ -121,7 +127,7 @@ contract MedicineChain {
             status: MedicineStatus.Manufactured,
             isRegistered: true
         });
-
+        medicineIdToBatch[medicineId] = batchNumber;
         medicineOwners[batchNumber] = msg.sender;
         medicineCount++;
 
@@ -216,6 +222,20 @@ contract MedicineChain {
 
         emit SupplyChainEventAdded(batchNumber, action, block.timestamp);
     }
+    
+    function getMedicineById(string memory medicineId)
+    public
+    view
+    returns (
+        bool registered,
+        string memory batchNumber
+        )
+    {
+      batchNumber = medicineIdToBatch[medicineId];
+      registered = bytes(batchNumber).length > 0 &&
+        medicines[batchNumber].isRegistered;
+    }
+
 
     function getMedicine(string memory batchNumber)
         public

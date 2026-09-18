@@ -6,6 +6,7 @@ const { ethers } = require('ethers');
 const artifactPath = path.join(__dirname, '..', 'artifacts', 'contracts', 'MedicineChain.sol', 'MedicineChain.json');
 const suffix = Date.now();
 const batchNumber = `CHAIN-TEST-${suffix}`;
+const medicineId = `MED-CHAIN-${suffix}`;
 
 async function main() {
   if (!process.env.CONTRACT_ADDRESS) throw new Error('CONTRACT_ADDRESS is missing from .env');
@@ -22,7 +23,7 @@ async function main() {
 
   const before = Number(await contract.medicineCount());
   const now = Math.floor(Date.now() / 1000);
-  const tx = await contract.registerMedicine('Blockchain Test Medicine', 'chain-test@medchain.local', now, now + 86400 * 365, batchNumber, 'Test warehouse');
+  const tx = await contract.registerMedicine(medicineId, 'Blockchain Test Medicine', 'chain-test@medchain.local', now, now + 86400 * 365, batchNumber, 'Test warehouse');
   const receipt = await tx.wait();
   const record = await contract.getMedicine(batchNumber);
   const historyLength = Number(await contract.getHistoryLength(batchNumber));

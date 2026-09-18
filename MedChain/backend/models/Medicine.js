@@ -6,6 +6,11 @@ const medicineSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  medicineId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   blockchainTransactionHash: {
     type: String,
     required: true,

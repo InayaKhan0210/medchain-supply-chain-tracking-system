@@ -11,10 +11,11 @@ const CONTRACT_ABI = [
   "function authorizedManufacturers(address) public view returns (bool)",
   "function authorizedDistributors(address) public view returns (bool)",
   "function getMedicine(string memory batchNumber) public view returns (string memory name, string memory manufacturer, uint256 manufacturingDate, uint256 expiryDate, string memory currentLocation, address currentOwner, uint8 status)",
+  "function getMedicineById(string memory medicineId) public view returns (bool registered, string memory batchNumber)",
   "function getHistoryLength(string memory batchNumber) public view returns (uint256)",
   "function getSupplyChainEvent(string memory batchNumber, uint256 index) public view returns (string memory action, string memory location, string memory description, uint256 timestamp, address actor)",
   "function isExpired(string memory batchNumber) public view returns (bool)",
-  "function registerMedicine(string memory name, string memory manufacturer, uint256 manufacturingDate, uint256 expiryDate, string memory batchNumber, string memory initialLocation)",
+  "function registerMedicine(string memory medicineId, string memory name, string memory manufacturer, uint256 manufacturingDate, uint256 expiryDate, string memory batchNumber, string memory initialLocation)",
   "function transferMedicine(string memory batchNumber, address newOwner, string memory newLocation)",
   "function updateStatus(string memory batchNumber, uint8 newStatus)",
   "function recordSupplyChainEvent(string memory batchNumber, string memory action, string memory location, string memory description)",
@@ -115,14 +116,15 @@ class BlockchainService {
     try {
       this.resetSignerNonce();
       const tx = await this.contract.registerMedicine(
-        medicineData.name,
-        medicineData.manufacturer,
-        Math.floor(new Date(medicineData.manufacturingDate).getTime() / 1000),
-        Math.floor(new Date(medicineData.expiryDate).getTime() / 1000),
-        medicineData.batchNumber,
-        medicineData.currentLocation,
-        await this.getWriteOverrides()
-      );
+      medicineData.medicineId,
+      medicineData.name,
+      medicineData.manufacturer,
+      Math.floor(new Date(medicineData.manufacturingDate).getTime() / 1000),
+      Math.floor(new Date(medicineData.expiryDate).getTime() / 1000),
+      medicineData.batchNumber,
+      medicineData.currentLocation,
+      await this.getWriteOverrides()
+    );
 
       const receipt = await tx.wait();
       logger.info('blockchain.medicine_registered', { batchNumber: medicineData.batchNumber, transactionHash: receipt.hash, blockNumber: receipt.blockNumber });
@@ -240,7 +242,29 @@ class BlockchainService {
       return { success: false, error: error.message };
     }
   }
+  async getMedicineById(medicineId) {
+    if (!this.isInitialized) await this.initialize();
 
+    try {
+    const result = await this.contract.getMedicineById(medicineId);
+
+      return {
+      success: true,
+      registered: result.registered,
+      batchNumber: result.batchNumber
+      };
+      } catch (error) {
+      logger.error('blockchain.medicine_id_lookup_failed', {
+       medicineId,
+       error: error.message
+    });
+
+    return {
+      success: false,
+      error: error.message
+      };
+    }
+  }
   async getMedicineHistory(batchNumber) {
     if (!this.isInitialized) {
       await this.initialize();

@@ -2,70 +2,2415 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 const roles = ['Manufacturer', 'Distributor', 'Retailer', 'Consumer']
+
 const adminRole = 'SuperAdmin'
+
 const roleMeta = {
-  Manufacturer: { mark: 'M', title: 'Production control', text: 'Register batches, issue traceable identities, and keep production moving.' },
-  SuperAdmin: { mark: 'A', title: 'Super Admin control', text: 'Approve orders, manage records, and monitor the entire network.' },
-  Distributor: { mark: 'D', title: 'Distribution desk', text: 'Source verified inventory and keep every handoff visible.' },
-  Retailer: { mark: 'R', title: 'Retail operations', text: 'Manage store stock and verify every medicine before it reaches a patient.' },
-  Consumer: { mark: 'C', title: 'Patient trust center', text: 'Look up a medicine and check its provenance in seconds.' },
+  Manufacturer: {
+    mark: 'M',
+    title: 'Production control',
+    text: 'Register batches, issue traceable identities, and keep production moving.',
+  },
+  SuperAdmin: {
+    mark: 'A',
+    title: 'Super Admin control',
+    text: 'Approve orders, manage records, and monitor the entire network.',
+  },
+  Distributor: {
+    mark: 'D',
+    title: 'Distribution desk',
+    text: 'Source verified inventory and keep every handoff visible.',
+  },
+  Retailer: {
+    mark: 'R',
+    title: 'Retail operations',
+    text: 'Manage store stock and verify every medicine before it reaches a patient.',
+  },
+  Consumer: {
+    mark: 'C',
+    title: 'Patient trust center',
+    text: 'Look up a medicine and check its provenance in seconds.',
+  },
 }
 
 function Logo({ dark = false }) {
-  return <div className={`flex items-center gap-3 ${dark ? 'text-white' : 'text-ink'}`}><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#25c79a] text-lg font-bold text-[#07151a] shadow-[0_8px_24px_rgba(37,199,154,.28)]">✚</span><span className="font-display text-xl font-bold tracking-tight">med<span className="text-[#25c79a]">chain</span></span></div>
+  return (
+    <div
+      className={`flex items-center gap-3 ${dark ? 'text-white' : 'text-ink'
+        }`}
+    >
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#25c79a] text-lg font-bold text-[#07151a] shadow-[0_8px_24px_rgba(37,199,154,.28)]">
+        ✚
+      </span>
+
+      <span className="font-display text-xl font-bold tracking-tight">
+        med<span className="text-[#25c79a]">chain</span>
+      </span>
+    </div>
+  )
 }
 
-function Button({ children, variant = 'primary', className = '', ...props }) {
-  const styles = { primary: 'bg-ink text-white shadow-[0_8px_18px_rgba(11,18,32,.15)] hover:bg-[#202d43]', mint: 'bg-mint text-ink hover:bg-[#39d5aa]', ghost: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50', dark: 'border border-white/15 bg-white/10 text-white hover:bg-white/15', danger: 'bg-rose-50 text-rose-700 hover:bg-rose-100' }
-  return <button className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`} {...props}>{children}</button>
+function Button({
+  children,
+  variant = 'primary',
+  className = '',
+  ...props
+}) {
+  const styles = {
+    primary:
+      'bg-ink text-white shadow-[0_8px_18px_rgba(11,18,32,.15)] hover:bg-[#202d43]',
+    mint: 'bg-mint text-ink hover:bg-[#39d5aa]',
+    ghost:
+      'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+    dark: 'border border-white/15 bg-white/10 text-white hover:bg-white/15',
+    danger: 'bg-rose-50 text-rose-700 hover:bg-rose-100',
+  }
+
+  return (
+    <button
+      className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  )
 }
 
 function Field({ label, className = '', ...props }) {
-  return <label className={`grid gap-2 text-sm font-semibold text-slate-600 ${className}`}>{label}<input className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#25c79a] focus:ring-4 focus:ring-[#25c79a]/10" {...props} /></label>
+  return (
+    <label
+      className={`grid gap-2 text-sm font-semibold text-slate-600 ${className}`}
+    >
+      {label}
+
+      <input
+        className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#25c79a] focus:ring-4 focus:ring-[#25c79a]/10"
+        {...props}
+      />
+    </label>
+  )
 }
 
 function Landing({ onRole, onSignup, onAdmin }) {
   const [about, setAbout] = useState(false)
-  if (about) return <div className="min-h-screen bg-[#07131c] text-white"><header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7"><Logo dark /><Button variant="dark" onClick={() => setAbout(false)}>Back to home</Button></header><main className="mx-auto max-w-5xl px-6 pb-20 pt-16"><p className="mb-5 text-sm font-bold uppercase tracking-[.22em] text-mint">The people behind the protocol</p><h1 className="max-w-3xl font-display text-5xl font-bold leading-[1.02] md:text-7xl">Trust should travel with the medicine.</h1><p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">MedChain brings manufacturers, distributors, retailers, and consumers into one accountable chain of custody.</p><div className="mt-16 grid gap-4 md:grid-cols-3">{['Hrushikesh Kamble · Frontend', 'Inaya Khan · Backend', 'Siddhesh Kulkarni · Blockchain'].map((person) => <div className="rounded-2xl border border-white/10 bg-white/5 p-5" key={person}><span className="text-mint">●</span><p className="mt-8 font-semibold">{person}</p><p className="mt-2 text-sm text-slate-400">Building a safer medicine network.</p></div>)}</div></main></div>
-  return <div className="grain mesh min-h-screen overflow-hidden bg-[#07131c] text-white"><header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-7"><Logo dark /><nav className="hidden items-center gap-8 text-sm text-slate-300 md:flex"><a href="#network" className="hover:text-white">Network</a><button onClick={() => setAbout(true)} className="hover:text-white">About us</button><a href="mailto:hello@medchain.app" className="hover:text-white">Contact</a></nav><div className="flex items-center gap-2"><Button variant="dark" onClick={onAdmin}>Super Admin</Button><Button variant="dark" className="hidden sm:block" onClick={onSignup}>Create account</Button></div></header><main className="relative z-10 mx-auto grid max-w-7xl gap-14 px-6 pb-16 pt-16 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:pt-24"><section><p className="mb-6 flex items-center gap-3 text-sm font-bold uppercase tracking-[.22em] text-mint"><span className="h-px w-8 bg-mint" /> Medicine, made accountable</p><h1 className="max-w-3xl font-display text-6xl font-bold leading-[.97] tracking-tight md:text-8xl">A clearer chain for <span className="text-[#63d4e8]">every dose.</span></h1><p className="mt-8 max-w-xl text-lg leading-8 text-slate-300">One secure workspace for registration, distribution, verification, and the people who depend on medicine.</p><div className="mt-10 flex flex-wrap gap-3"><div className="grid w-full max-w-xl gap-2 sm:grid-cols-2"><p className="col-span-full mb-1 text-xs font-bold uppercase tracking-[.18em] text-slate-400">Sign in as</p>{roles.map((role) => <button key={role} onClick={() => onRole(role)} className="flex items-center justify-between rounded-xl border border-white/15 bg-white/[.07] px-4 py-3 text-left text-sm font-semibold text-white transition hover:border-mint hover:bg-white/15"><span className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-mint font-bold text-ink">{roleMeta[role].mark}</span>{role}</span><span className="text-mint">→</span></button>)}</div><button onClick={() => setAbout(true)} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10">Meet the team</button></div><div className="mt-16 flex gap-10 border-t border-white/10 pt-6"><div><p className="font-display text-2xl font-bold">4</p><p className="mt-1 text-xs uppercase tracking-widest text-slate-400">Connected roles</p></div><div><p className="font-display text-2xl font-bold">24/7</p><p className="mt-1 text-xs uppercase tracking-widest text-slate-400">Traceability</p></div></div></section><section className="relative"><div className="absolute -inset-10 rounded-full bg-[#25c79a]/10 blur-3xl" /><div className="relative rounded-[28px] border border-white/15 bg-white/[.07] p-3 shadow-2xl backdrop-blur-xl"><div className="rounded-[20px] bg-[#f7fbfa] p-6 text-ink md:p-8"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-[.18em] text-slate-400">Network pulse</span><span className="flex items-center gap-2 text-xs font-semibold text-emerald-600"><i className="h-2 w-2 rounded-full bg-emerald-500" /> Live system</span></div><div className="mt-10 grid grid-cols-2 gap-3"><div className="col-span-2 rounded-2xl bg-[#07131c] p-5 text-white"><p className="text-xs text-slate-400">Verified medicines</p><p className="mt-2 font-display text-4xl font-bold">12,840</p><div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full w-4/5 rounded-full bg-mint" /></div><p className="mt-2 text-xs text-slate-400">+18.4% this month</p></div>{['Manufacturer', 'Distributor', 'Retailer', 'Consumer'].map((role) => <div className="rounded-2xl border border-slate-200 p-4" key={role}><p className="text-xs text-slate-400">{role}</p><p className="mt-5 text-lg font-bold">Ready</p></div>)}</div></div></div></section></main></div>
+
+  if (about) {
+    return (
+      <div className="min-h-screen bg-[#07131c] text-white">
+        <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7">
+          <Logo dark />
+
+          <Button variant="dark" onClick={() => setAbout(false)}>
+            Back to home
+          </Button>
+        </header>
+
+        <main className="mx-auto max-w-5xl px-6 pb-20 pt-16">
+          <p className="mb-5 text-sm font-bold uppercase tracking-[.22em] text-mint">
+            The people behind the protocol
+          </p>
+
+          <h1 className="max-w-3xl font-display text-5xl font-bold leading-[1.02] md:text-7xl">
+            Trust should travel with the medicine.
+          </h1>
+
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
+            MedChain brings manufacturers, distributors, retailers, and
+            consumers into one accountable chain of custody.
+          </p>
+
+          <div className="mt-16 grid gap-4 md:grid-cols-3">
+            {[
+              'Hrushikesh Kamble · Frontend',
+              'Inaya Khan · Backend',
+              'Siddhesh Kulkarni · Blockchain',
+            ].map((person) => (
+              <div
+                className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                key={person}
+              >
+                <span className="text-mint">●</span>
+
+                <p className="mt-8 font-semibold">{person}</p>
+
+                <p className="mt-2 text-sm text-slate-400">
+                  Building a safer medicine network.
+                </p>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grain mesh min-h-screen overflow-hidden bg-[#07131c] text-white">
+      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-7">
+        <Logo dark />
+
+        <nav className="hidden items-center gap-8 text-sm text-slate-300 md:flex">
+          <a href="#network" className="hover:text-white">
+            Network
+          </a>
+
+          <button onClick={() => setAbout(true)} className="hover:text-white">
+            About us
+          </button>
+
+          <a href="mailto:hello@medchain.app" className="hover:text-white">
+            Contact
+          </a>
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <Button variant="dark" onClick={onAdmin}>
+            Super Admin
+          </Button>
+
+          <Button
+            variant="dark"
+            className="hidden sm:block"
+            onClick={onSignup}
+          >
+            Create account
+          </Button>
+        </div>
+      </header>
+
+      <main className="relative z-10 mx-auto grid max-w-7xl gap-14 px-6 pb-16 pt-16 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:pt-24">
+        <section>
+          <p className="mb-6 flex items-center gap-3 text-sm font-bold uppercase tracking-[.22em] text-mint">
+            <span className="h-px w-8 bg-mint" />
+            Medicine, made accountable
+          </p>
+
+          <h1 className="max-w-3xl font-display text-6xl font-bold leading-[.97] tracking-tight md:text-8xl">
+            A clearer chain for{' '}
+            <span className="text-[#63d4e8]">every dose.</span>
+          </h1>
+
+          <p className="mt-8 max-w-xl text-lg leading-8 text-slate-300">
+            One secure workspace for registration, distribution, verification,
+            and the people who depend on medicine.
+          </p>
+
+          <div className="mt-10 flex flex-wrap gap-3">
+            <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
+              <p className="col-span-full mb-1 text-xs font-bold uppercase tracking-[.18em] text-slate-400">
+                Sign in as
+              </p>
+
+              {roles.map((role) => (
+                <button
+                  key={role}
+                  onClick={() => onRole(role)}
+                  className="flex items-center justify-between rounded-xl border border-white/15 bg-white/[.07] px-4 py-3 text-left text-sm font-semibold text-white transition hover:border-mint hover:bg-white/15"
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-mint font-bold text-ink">
+                      {roleMeta[role].mark}
+                    </span>
+
+                    {role}
+                  </span>
+
+                  <span className="text-mint">→</span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setAbout(true)}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+            >
+              Meet the team
+            </button>
+          </div>
+
+          <div className="mt-16 flex gap-10 border-t border-white/10 pt-6">
+            <div>
+              <p className="font-display text-2xl font-bold">4</p>
+              <p className="mt-1 text-xs uppercase tracking-widest text-slate-400">
+                Connected roles
+              </p>
+            </div>
+
+            <div>
+              <p className="font-display text-2xl font-bold">24/7</p>
+              <p className="mt-1 text-xs uppercase tracking-widest text-slate-400">
+                Traceability
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="relative">
+          <div className="absolute -inset-10 rounded-full bg-[#25c79a]/10 blur-3xl" />
+
+          <div className="relative rounded-[28px] border border-white/15 bg-white/[.07] p-3 shadow-2xl backdrop-blur-xl">
+            <div className="rounded-[20px] bg-[#f7fbfa] p-6 text-ink md:p-8">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-[.18em] text-slate-400">
+                  Network pulse
+                </span>
+
+                <span className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
+                  <i className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Live system
+                </span>
+              </div>
+
+              <div className="mt-10 grid grid-cols-2 gap-3">
+                <div className="col-span-2 rounded-2xl bg-[#07131c] p-5 text-white">
+                  <p className="text-xs text-slate-400">
+                    Verified medicines
+                  </p>
+
+                  <p className="mt-2 font-display text-4xl font-bold">
+                    12,840
+                  </p>
+
+                  <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full w-4/5 rounded-full bg-mint" />
+                  </div>
+
+                  <p className="mt-2 text-xs text-slate-400">
+                    +18.4% this month
+                  </p>
+                </div>
+
+                {['Manufacturer', 'Distributor', 'Retailer', 'Consumer'].map(
+                  (role) => (
+                    <div
+                      className="rounded-2xl border border-slate-200 p-4"
+                      key={role}
+                    >
+                      <p className="text-xs text-slate-400">{role}</p>
+                      <p className="mt-5 text-lg font-bold">Ready</p>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  )
 }
 
 function Auth({ mode, role, onBack, onLogin, onSignup }) {
-  const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [selectedRole, setSelectedRole] = useState(role || 'Manufacturer'); const [error, setError] = useState('')
-  const submit = () => { if (!email || !password) return setError('Email and password are required.'); if (role === adminRole) { if (email !== 'sadmin' || password !== 'sadmin') return setError('Invalid Super Admin credentials.'); onLogin({ email, role: adminRole }); return } const users = JSON.parse(localStorage.getItem('medchain-users') || '[]'); if (mode === 'signup') { if (users.some((item) => item.email.toLowerCase() === email.toLowerCase())) return setError('An account with this email already exists.'); const next = [...users, { email, password, role: selectedRole, id: Date.now() }]; localStorage.setItem('medchain-users', JSON.stringify(next)); onSignup(email, password, selectedRole) } else { const match = users.find((item) => item.email.toLowerCase() === email.toLowerCase() && item.password === password && item.role === role); if (!match) return setError('Those credentials do not match this role.'); onLogin(match) } }
-  return <div className="flex min-h-screen bg-[#07131c]"><div className="hidden w-[42%] flex-col justify-between p-10 text-white lg:flex"><Logo dark /><div><p className="mb-5 text-sm font-bold uppercase tracking-[.22em] text-mint">Secure by design</p><h1 className="max-w-lg font-display text-6xl font-bold leading-none">The medicine network, in your hands.</h1><p className="mt-7 max-w-md leading-7 text-slate-400">Manage provenance, inventory, and trust from a single calm workspace.</p></div><p className="text-xs text-slate-500">MedChain platform · 2026</p></div><div className="flex flex-1 items-center justify-center bg-[#f5f7fa] px-6 py-10"><div className="w-full max-w-md"><div className="mb-8 lg:hidden"><Logo /></div><div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-[0_20px_60px_rgba(15,23,42,.08)] md:p-9"><p className="text-xs font-bold uppercase tracking-[.2em] text-mint">MedChain access</p><h2 className="mt-3 font-display text-3xl font-bold text-ink">{mode === 'signup' ? 'Create your workspace' : `Welcome back${role ? `, ${role.toLowerCase()}` : ''}.`}</h2><p className="mt-3 text-sm leading-6 text-slate-500">{mode === 'signup' ? 'Join the accountable medicine network.' : 'Continue where your chain of custody left off.'}</p>{error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}<div className="mt-7 grid gap-4">{mode === 'signup' && <label className="grid gap-2 text-sm font-semibold text-slate-600">Account role<select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 font-normal outline-none focus:border-mint">{roles.map((item) => <option key={item}>{item}</option>)}</select></label>}<Field label="Email address" type="email" placeholder="name1@example.com" value={email} onChange={(e) => { setEmail(e.target.value); setError('') }} /><Field label="Password" type="password" placeholder="Enter your password" value={password} onChange={(e) => { setPassword(e.target.value); setError('') }} /></div><Button className="mt-7 w-full" onClick={submit}>{mode === 'signup' ? 'Create account' : 'Sign in'} <span className="ml-2">→</span></Button><button onClick={onBack} className="mt-4 w-full text-center text-sm font-semibold text-slate-500 hover:text-ink">Back to role selection</button></div></div></div></div>
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [selectedRole, setSelectedRole] = useState(
+    role || 'Manufacturer'
+  )
+  const [error, setError] = useState('')
+
+  const submit = () => {
+    if (!email || !password) {
+      return setError('Email and password are required.')
+    }
+
+    if (role === adminRole) {
+      if (email !== 'sadmin' || password !== 'sadmin') {
+        return setError('Invalid Super Admin credentials.')
+      }
+
+      onLogin({ email, role: adminRole })
+      return
+    }
+
+    const users = JSON.parse(
+      localStorage.getItem('medchain-users') || '[]'
+    )
+
+    if (mode === 'signup') {
+      if (
+        users.some(
+          (item) =>
+            item.email.toLowerCase() === email.toLowerCase()
+        )
+      ) {
+        return setError(
+          'An account with this email already exists.'
+        )
+      }
+
+      const next = [
+        ...users,
+        {
+          email,
+          password,
+          role: selectedRole,
+          id: Date.now(),
+        },
+      ]
+
+      localStorage.setItem(
+        'medchain-users',
+        JSON.stringify(next)
+      )
+
+      onSignup(email, password, selectedRole)
+    } else {
+      const match = users.find(
+        (item) =>
+          item.email.toLowerCase() === email.toLowerCase() &&
+          item.password === password &&
+          item.role === role
+      )
+
+      if (!match) {
+        return setError(
+          'Those credentials do not match this role.'
+        )
+      }
+
+      onLogin(match)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen bg-[#07131c]">
+      <div className="hidden w-[42%] flex-col justify-between p-10 text-white lg:flex">
+        <Logo dark />
+
+        <div>
+          <p className="mb-5 text-sm font-bold uppercase tracking-[.22em] text-mint">
+            Secure by design
+          </p>
+
+          <h1 className="max-w-lg font-display text-6xl font-bold leading-none">
+            The medicine network, in your hands.
+          </h1>
+
+          <p className="mt-7 max-w-md leading-7 text-slate-400">
+            Manage provenance, inventory, and trust from a single calm
+            workspace.
+          </p>
+        </div>
+
+        <p className="text-xs text-slate-500">
+          MedChain platform · 2026
+        </p>
+      </div>
+
+      <div className="flex flex-1 items-center justify-center bg-[#f5f7fa] px-6 py-10">
+        <div className="w-full max-w-md">
+          <div className="mb-8 lg:hidden">
+            <Logo />
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-[0_20px_60px_rgba(15,23,42,.08)] md:p-9">
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-mint">
+              MedChain access
+            </p>
+
+            <h2 className="mt-3 font-display text-3xl font-bold text-ink">
+              {mode === 'signup'
+                ? 'Create your workspace'
+                : `Welcome back${role ? `, ${role.toLowerCase()}` : ''
+                }.`}
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              {mode === 'signup'
+                ? 'Join the accountable medicine network.'
+                : 'Continue where your chain of custody left off.'}
+            </p>
+
+            {error && (
+              <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {error}
+              </div>
+            )}
+
+            <div className="mt-7 grid gap-4">
+              {mode === 'signup' && (
+                <label className="grid gap-2 text-sm font-semibold text-slate-600">
+                  Account role
+
+                  <select
+                    value={selectedRole}
+                    onChange={(e) =>
+                      setSelectedRole(e.target.value)
+                    }
+                    className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 font-normal outline-none focus:border-mint"
+                  >
+                    {roles.map((item) => (
+                      <option key={item}>{item}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <Field
+                label="Email address"
+                type="email"
+                placeholder="name1@example.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setError('')
+                }}
+              />
+
+              <Field
+                label="Password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setError('')
+                }}
+              />
+            </div>
+
+            <Button className="mt-7 w-full" onClick={submit}>
+              {mode === 'signup' ? 'Create account' : 'Sign in'}
+              <span className="ml-2">→</span>
+            </Button>
+
+            <button
+              onClick={onBack}
+              className="mt-4 w-full text-center text-sm font-semibold text-slate-500 hover:text-ink"
+            >
+              Back to role selection
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
-function Scanner({ id, onScan }) { const scannerRef = useRef(null); useEffect(() => { const scanner = new Html5QrcodeScanner(id, { fps: 10, qrbox: { width: 220, height: 220 } }, false); scannerRef.current = scanner; scanner.render((value) => { try { onScan(JSON.parse(value)) } catch { onScan({ data: value }) } scanner.clear().catch(() => {}) }, () => {}); return () => { scanner.clear().catch(() => {}) } }, [id, onScan]); return <div id={id} className="qr-reader overflow-hidden rounded-2xl border border-slate-200 bg-slate-50" /> }
+function Scanner({ id, onScan }) {
+  const scannerRef = useRef(null)
 
-function MedicineRow({ medicine, onClick }) { const expiry = medicine.expiryDate ? new Date(medicine.expiryDate) : null; const expired = expiry && expiry < new Date(); return <button onClick={onClick} className="grid w-full grid-cols-[1fr_auto] gap-4 border-b border-slate-100 px-5 py-4 text-left last:border-0 hover:bg-slate-50 md:grid-cols-[1.4fr_1fr_.8fr_.7fr] md:items-center"><div><p className="font-semibold text-ink">{medicine.name}</p><p className="mt-1 text-xs text-slate-400">Batch {medicine.batchNumber} · ID {medicine.blockchainId}</p></div><p className="hidden text-sm text-slate-500 md:block">{medicine.manufacturer || 'Network stock'}</p><p className="text-right text-sm font-semibold text-slate-700 md:text-left">{medicine.quantity || 0} units</p><span className={`col-start-2 row-start-1 rounded-full px-2.5 py-1 text-center text-[11px] font-bold md:col-auto md:row-auto ${expired ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>{expired ? 'Expired' : 'Active'}</span></button> }
+  useEffect(() => {
+    const scanner = new Html5QrcodeScanner(
+      id,
+      {
+        fps: 10,
+        qrbox: {
+          width: 220,
+          height: 220,
+        },
+      },
+      false
+    )
 
-function Layout({ user, children, onLogout }) { const meta = roleMeta[user.role]; return <div className="min-h-screen bg-[#f5f7fa]"><aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white px-5 py-6 lg:flex"><Logo /><div className="mt-12"><p className="px-3 text-[11px] font-bold uppercase tracking-[.18em] text-slate-400">Workspace</p><div className="mt-4 rounded-2xl bg-ink p-4 text-white"><span className="grid h-9 w-9 place-items-center rounded-xl bg-mint font-bold text-ink">{meta.mark}</span><p className="mt-8 font-display text-lg font-bold">{meta.title}</p><p className="mt-2 text-xs leading-5 text-slate-400">{meta.text}</p></div></div><div className="mt-auto"><div className="mb-4 h-px bg-slate-100" /><button onClick={onLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-ink"><span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100">↪</span> Sign out</button></div></aside><div className="lg:pl-64"><header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white/85 px-5 backdrop-blur md:px-10"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-slate-400">{user.role} workspace</p><p className="mt-1 text-sm text-slate-500">Good to see you, <span className="font-semibold text-ink">{user.email}</span></p></div><div className="flex items-center gap-3"><span className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:block">● System operational</span><button onClick={onLogout} className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 lg:hidden">↪</button><div className="grid h-10 w-10 place-items-center rounded-xl bg-ink font-bold text-mint">{user.email[0].toUpperCase()}</div></div></header><main className="mx-auto max-w-7xl p-5 md:p-10">{children}</main></div></div> }
+    scannerRef.current = scanner
 
-function Heading({ eyebrow, title, description }) { return <div><p className="text-xs font-bold uppercase tracking-[.2em] text-emerald-600">{eyebrow}</p><h1 className="mt-3 font-display text-4xl font-bold tracking-tight text-ink md:text-5xl">{title}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 md:text-base">{description}</p></div> }
-function Empty({ text }) { return <div className="p-12 text-center text-sm text-slate-400">{text}</div> }
-function Notice({ title, data, onClear }) { return <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div className="flex items-center justify-between"><p className="font-semibold text-emerald-800">✓ {title}</p><button onClick={onClear} className="text-xs font-bold text-emerald-700">Clear</button></div><div className="mt-3 grid gap-2 text-xs text-emerald-900">{Object.entries(data).slice(0, 6).map(([key, value]) => <p key={key}><span className="font-bold capitalize">{key}: </span>{String(value)}</p>)}</div></div> }
+    scanner.render(
+      (value) => {
+        try {
+          onScan(JSON.parse(value))
+        } catch {
+          onScan({ data: value })
+        }
 
-function Manufacturer({ user }) { const [medicines, setMedicines] = useState([]); const [created, setCreated] = useState(null); const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [showScanner, setShowScanner] = useState(false); const [scanned, setScanned] = useState(null); const [form, setForm] = useState({ name: '', batch: '', manufacturingDate: '', expiryDate: '', chemicalComponents: '', description: '', storageConditions: '', dosage: '', price: '', quantity: '' }); const update = (key) => (event) => setForm({ ...form, [key]: event.target.value }); useEffect(() => { fetch(`${API_URL}/medicines`).then((res) => res.json()).then(setMedicines).catch(() => {}) }, []); const register = async () => { if (!form.name || !form.batch || !form.expiryDate || !form.chemicalComponents) return setError('Name, batch, expiry date, and chemical components are required.'); setLoading(true); setError(''); const id = Math.floor(Math.random() * 1000000).toString(); const medicine = { blockchainId: id, name: form.name, batchNumber: form.batch, qrCodeData: JSON.stringify({ id, ...form }), manufacturer: user.email, manufacturingDate: form.manufacturingDate || new Date().toISOString(), expiryDate: form.expiryDate, chemicalComponents: form.chemicalComponents, description: form.description, storageConditions: form.storageConditions, dosage: form.dosage, price: Number(form.price) || 0, quantity: Number(form.quantity) || 0 }; try { const response = await fetch(`${API_URL}/medicines/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(medicine) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Registration failed'); setCreated(data.medicine); setMedicines([data.medicine, ...medicines]); setForm({ name: '', batch: '', manufacturingDate: '', expiryDate: '', chemicalComponents: '', description: '', storageConditions: '', dosage: '', price: '', quantity: '' }); } catch (err) { setError(err.message || 'Network error. Is the backend running?') } finally { setLoading(false) } }; return <><Heading eyebrow="Manufacturer" title="Production control" description="Register a new batch and create its chain-of-custody identity." /><div className="mt-8 grid gap-6 xl:grid-cols-[1.35fr_.65fr]"><section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,.04)]"><div className="flex items-center justify-between"><div><h2 className="font-display text-lg font-bold">Register a medicine</h2><p className="mt-1 text-sm text-slate-500">Required fields are marked with an asterisk.</p></div><span className="rounded-full bg-mint/10 px-3 py-1 text-xs font-bold text-emerald-700">New batch</span></div>{error && <div className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}<div className="mt-6 grid gap-4 sm:grid-cols-2">{[['name', 'Medicine name *'], ['batch', 'Batch number *'], ['manufacturingDate', 'Manufacturing date', 'date'], ['expiryDate', 'Expiry date *', 'date'], ['chemicalComponents', 'Chemical components *'], ['description', 'Description'], ['storageConditions', 'Storage conditions'], ['dosage', 'Dosage'], ['price', 'Unit price', 'number'], ['quantity', 'Quantity', 'number']].map(([key, label, type = 'text']) => <Field key={key} label={label} type={type} value={form[key]} onChange={update(key)} />)}</div><div className="mt-6 flex flex-wrap gap-3"><Button variant="mint" onClick={register} disabled={loading}>{loading ? 'Registering...' : 'Register medicine'} →</Button><Button variant="ghost" onClick={() => setShowScanner(!showScanner)}>{showScanner ? 'Close scanner' : 'Scan a batch'}</Button></div>{showScanner && <div className="mt-6 max-w-sm"><Scanner id="manufacturer-scanner" onScan={setScanned} /></div>}{scanned && <Notice title="Scanned batch" data={scanned} onClear={() => setScanned(null)} />}</section><section className="rounded-2xl bg-ink p-6 text-white"><p className="text-xs font-bold uppercase tracking-[.18em] text-mint">Batch identity</p>{created ? <><h2 className="mt-3 font-display text-2xl font-bold">{created.name}</h2><p className="mt-1 text-sm text-slate-400">Batch {created.batchNumber}</p><div className="mt-8 rounded-2xl bg-white p-5"><QRCodeSVG value={created.qrCodeData} size={200} className="mx-auto h-auto max-w-full" /></div><p className="mt-4 break-all text-xs text-slate-400">Blockchain ID · {created.blockchainId}</p></> : <div className="flex min-h-72 flex-col justify-end"><div className="grid h-20 w-20 place-items-center rounded-2xl border border-white/10 text-4xl text-mint">⌁</div><h2 className="mt-8 font-display text-2xl font-bold">Your QR appears here.</h2><p className="mt-2 text-sm leading-6 text-slate-400">Register a medicine to mint its scannable identity.</p></div>}</section></div><section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,.04)]"><div className="flex items-center justify-between border-b border-slate-100 p-5"><div><h2 className="font-display text-lg font-bold">Registered medicines</h2><p className="mt-1 text-sm text-slate-500">{medicines.length} records in the network</p></div><span className="text-sm text-slate-400">Latest first</span></div>{medicines.length ? medicines.map((item) => <MedicineRow key={item._id || item.blockchainId} medicine={item} />) : <Empty text="No medicines registered yet." />}</section></> }
+        scanner.clear().catch(() => { })
+      },
+      () => { }
+    )
 
-function SupplyDashboard({ user, retailer = false }) { const [medicines, setMedicines] = useState([]); const [tab, setTab] = useState(retailer ? 'store' : 'available'); const [showOrder, setShowOrder] = useState(false); const [selected, setSelected] = useState(null); const [quantity, setQuantity] = useState(''); const [orders, setOrders] = useState([]); const [inventory, setInventory] = useState([]); const [loading, setLoading] = useState(false); useEffect(() => { fetch(`${API_URL}/medicines`).then((res) => res.json()).then((data) => { setMedicines(data); setOrders(data.filter((m) => retailer ? m.retailer === user.email : m.distributor === user.email)); setInventory(data.filter((m) => retailer ? m.retailer === user.email : m.distributor === user.email)) }).catch(() => {}) }, [user.email, retailer]); const placeOrder = async () => { if (!selected || !quantity) return; setLoading(true); try { const body = { medicineId: selected._id, quantity: Number(quantity), orderDate: new Date().toISOString(), ...(retailer ? { retailer: user.email } : { distributor: user.email }) }; const response = await fetch(`${API_URL}/medicines/order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!response.ok) throw new Error(); setShowOrder(false); setSelected(null); setQuantity(''); const data = await fetch(`${API_URL}/medicines`).then((res) => res.json()); setMedicines(data); setOrders(data.filter((m) => retailer ? m.retailer === user.email : m.distributor === user.email)); setInventory(data.filter((m) => retailer ? m.retailer === user.email : m.distributor === user.email)); } catch { alert('Could not place the order. Check the backend connection.') } finally { setLoading(false) } }; const tabs = retailer ? [['store', 'Store inventory'], ['available', 'Available stock'], ['orders', 'My orders'], ['verify', 'Verify QR']] : [['available', 'Available stock'], ['orders', 'My orders'], ['inventory', 'My inventory']]; return <><Heading eyebrow={retailer ? 'Retail operations' : 'Distribution desk'} title={retailer ? 'Store inventory' : 'Move medicine with confidence'} description={retailer ? 'Keep shelf stock healthy and verify every batch before sale.' : 'Source medicine from manufacturers and track every order in motion.'} /><div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,.04)]"><div className="flex gap-1 overflow-x-auto border-b border-slate-100 p-2">{tabs.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition ${tab === id ? 'bg-ink text-white' : 'text-slate-500 hover:bg-slate-50'}`}>{label}</button>)}</div><div className="p-5 md:p-7">{(tab === 'store' || tab === 'inventory') && <Inventory items={inventory} retailer={retailer} onOrder={() => setTab('available')} />}{tab === 'available' && <Catalog medicines={medicines} showOrder={showOrder} setShowOrder={setShowOrder} selected={selected} setSelected={setSelected} quantity={quantity} setQuantity={setQuantity} loading={loading} placeOrder={placeOrder} />}{tab === 'orders' && <div><h2 className="font-display text-xl font-bold">Order activity</h2>{orders.length ? <div className="mt-5 divide-y divide-slate-100">{orders.map((item, index) => <div key={item._id || index} className="flex items-center justify-between py-4"><div><p className="font-semibold">{item.name}</p><p className="mt-1 text-xs text-slate-400">Batch {item.batchNumber} · {item.quantity || 0} units</p></div><span className="rounded-full bg-cyan/10 px-3 py-1 text-xs font-bold text-sky-700">In progress</span></div>)}</div> : <Empty text="No orders placed yet." />}</div>}{tab === 'verify' && <Verify id="retailer-scanner" />}</div></div></> }
-function Inventory({ items, retailer, onOrder }) { return <div><div className="flex items-center justify-between"><div><h2 className="font-display text-xl font-bold">{retailer ? 'Store inventory' : 'My inventory'}</h2><p className="mt-1 text-sm text-slate-500">{items.length} active stock records</p></div><Button variant="ghost" onClick={onOrder}>+ Place order</Button></div>{items.length ? <div className="mt-5 overflow-hidden rounded-xl border border-slate-100"><div className="hidden grid-cols-[1.4fr_1fr_.7fr_.7fr] bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 md:grid"><span>Medicine</span><span>Batch</span><span>Stock</span><span>Expiry</span></div>{items.map((item) => <div className="grid grid-cols-2 gap-3 border-b border-slate-100 px-5 py-4 text-sm last:border-0 md:grid-cols-[1.4fr_1fr_.7fr_.7fr]" key={item._id}><span className="font-semibold">{item.name}</span><span className="text-slate-500">{item.batchNumber}</span><span className="font-semibold text-emerald-600">{item.quantity || 0}</span><span className="text-slate-500">{item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : '—'}</span></div>)}</div> : <Empty text="No inventory items yet." />}</div> }
-function Catalog({ medicines, showOrder, setShowOrder, selected, setSelected, quantity, setQuantity, loading, placeOrder }) { return <div><div className="flex items-center justify-between"><div><h2 className="font-display text-xl font-bold">Available medicine</h2><p className="mt-1 text-sm text-slate-500">Verified stock from your upstream network.</p></div><Button variant="mint" onClick={() => setShowOrder(!showOrder)}>{showOrder ? 'Cancel' : 'Place an order'} →</Button></div>{showOrder && <div className="mt-6 rounded-2xl border border-mint/30 bg-mint/5 p-5"><p className="font-semibold">Build an order</p><div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px_auto]"><select value={selected?._id || ''} onChange={(e) => setSelected(medicines.find((item) => item._id === e.target.value))} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="">Select a medicine</option>{medicines.map((item) => <option key={item._id} value={item._id}>{item.name} · {item.quantity || 0} units</option>)}</select><input type="number" min="1" placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm" /><Button onClick={placeOrder} disabled={loading || !selected}>{loading ? 'Processing...' : 'Confirm order'}</Button></div></div>}<div className="mt-6 grid gap-3 md:grid-cols-2">{medicines.length ? medicines.map((item) => <button onClick={() => { setSelected(item); setShowOrder(true) }} key={item._id} className="rounded-2xl border border-slate-200 p-5 text-left transition hover:-translate-y-0.5 hover:border-mint hover:shadow-lg"><div className="flex items-start justify-between"><span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan/10 font-bold text-sky-700">{item.name?.[0] || 'M'}</span><span className="text-xs font-bold text-emerald-600">In stock</span></div><h3 className="mt-6 font-display text-lg font-bold">{item.name}</h3><p className="mt-1 text-xs text-slate-400">Batch {item.batchNumber}</p><div className="mt-5 flex justify-between border-t border-slate-100 pt-4 text-sm"><span className="text-slate-500">Available {item.quantity || 0}</span><span className="font-bold">${item.price || 0} / unit</span></div></button>) : <Empty text="No medicine available yet." />}</div></div> }
-function Verify({ id }) { const [show, setShow] = useState(false); const [data, setData] = useState(null); return <div className="max-w-2xl"><h2 className="font-display text-xl font-bold">Verify medicine authenticity</h2><p className="mt-2 text-sm leading-6 text-slate-500">Scan a MedChain QR identity to inspect the batch data.</p><Button variant="mint" className="mt-6" onClick={() => setShow(!show)}>{show ? 'Close scanner' : 'Open scanner'} →</Button>{show && <div className="mt-6 max-w-md"><Scanner id={id} onScan={setData} /></div>}{data && <Notice title="Medicine identity captured" data={data} onClear={() => setData(null)} />}</div> }
+    return () => {
+      scanner.clear().catch(() => { })
+    }
+  }, [id, onScan])
 
-function Consumer() { const [medicines, setMedicines] = useState([]); const [term, setTerm] = useState(''); const [selected, setSelected] = useState(null); const [tab, setTab] = useState('search'); useEffect(() => { fetch(`${API_URL}/medicines`).then((res) => res.json()).then(setMedicines).catch(() => {}) }, []); const filtered = useMemo(() => medicines.filter((item) => `${item.name} ${item.batchNumber}`.toLowerCase().includes(term.toLowerCase())), [medicines, term]); return <><Heading eyebrow="Patient trust center" title="Know what you’re taking" description="Search the live medicine network or scan a batch identity before it reaches your cabinet." /><div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,.04)]"><div className="flex gap-1 border-b border-slate-100 p-2"><button onClick={() => setTab('search')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'search' ? 'bg-ink text-white' : 'text-slate-500'}`}>Search network</button><button onClick={() => setTab('verify')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'verify' ? 'bg-ink text-white' : 'text-slate-500'}`}>Verify with QR</button></div><div className="p-5 md:p-7">{tab === 'search' ? <><div className="relative"><span className="absolute left-4 top-3 text-slate-400">⌕</span><input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search medicine name or batch number..." className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm outline-none focus:border-mint focus:bg-white" /></div><div className="mt-6 overflow-hidden rounded-xl border border-slate-100"><div className="hidden grid-cols-[1fr_1fr_.8fr_.6fr] bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 md:grid"><span>Medicine</span><span>Manufacturer</span><span>Stock</span><span>Status</span></div>{filtered.length ? filtered.map((item) => <MedicineRow key={item._id} medicine={item} onClick={() => setSelected(item)} />) : <Empty text="No medicines match that search." />}</div></> : <Verify id="consumer-scanner" />}</div></div>{selected && <div className="fixed inset-0 z-20 grid place-items-center bg-ink/60 p-5 backdrop-blur-sm" onClick={() => setSelected(null)}><div onClick={(e) => e.stopPropagation()} className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-white p-7 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-600">Verified record</p><h2 className="mt-2 font-display text-3xl font-bold">{selected.name}</h2><p className="mt-1 text-sm text-slate-500">Batch {selected.batchNumber}</p></div><button onClick={() => setSelected(null)} className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-500">×</button></div><div className="mt-8 grid gap-4 sm:grid-cols-2">{[['Manufacturer', selected.manufacturer], ['Blockchain ID', selected.blockchainId], ['Components', selected.chemicalComponents], ['Dosage', selected.dosage || 'Not specified'], ['Manufactured', selected.manufacturingDate && new Date(selected.manufacturingDate).toLocaleDateString()], ['Expires', selected.expiryDate && new Date(selected.expiryDate).toLocaleDateString()], ['Storage', selected.storageConditions || 'Not specified'], ['Quantity', `${selected.quantity || 0} units`]].map(([label, value]) => <div className="rounded-xl bg-slate-50 p-4" key={label}><p className="text-xs font-bold uppercase tracking-widest text-slate-400">{label}</p><p className="mt-2 text-sm font-semibold text-ink">{value || '—'}</p></div>)}</div><Button className="mt-7 w-full" onClick={() => setSelected(null)}>Close record</Button></div></div>}</> }
-
-function App() { const [user, setUser] = useState(null); const [auth, setAuth] = useState(null); if (!user) { if (auth) return <Auth {...auth} onBack={() => setAuth(null)} onLogin={setUser} onSignup={(email, password, role) => setUser({ email, password, role })} />; return <Landing onRole={(role) => setAuth({ mode: 'login', role })} onSignup={() => setAuth({ mode: 'signup' })} onAdmin={() => setAuth({ mode: 'login', role: adminRole })} /> } const content = user.role === adminRole ? <AdminPanel /> : user.role === 'Manufacturer' ? <Manufacturer user={user} /> : user.role === 'Consumer' ? <Consumer /> : <SupplyDashboard user={user} retailer={user.role === 'Retailer'} />; return <Layout user={user} onLogout={() => setUser(null)}>{content}<p className="mt-10 text-center text-xs text-slate-400">MedChain network · Connected to local API at {API_URL}</p></Layout> }
-
-function Stat({ label, value, hint, tone = 'mint' }) {
-  return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,.04)]"><div className="mb-5 flex items-center justify-between"><span className={`h-2.5 w-2.5 rounded-full ${tone === 'mint' ? 'bg-mint' : tone === 'amber' ? 'bg-amber-400' : 'bg-cyan'}`} /><span className="text-xs font-semibold uppercase tracking-[.16em] text-slate-400">{hint}</span></div><p className="font-display text-3xl font-bold text-ink">{value}</p><p className="mt-1 text-sm text-slate-500">{label}</p></div>
+  return (
+    <div
+      id={id}
+      className="qr-reader overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+    />
+  )
 }
+
+function MedicineRow({ medicine, onClick }) {
+  const expiry = medicine.expiryDate
+    ? new Date(medicine.expiryDate)
+    : null
+
+  const expired = expiry && expiry < new Date()
+
+  return (
+    <button
+      onClick={onClick}
+      className="grid w-full grid-cols-[1fr_auto] gap-4 border-b border-slate-100 px-5 py-4 text-left last:border-0 hover:bg-slate-50 md:grid-cols-[1.4fr_1fr_.8fr_.7fr] md:items-center"
+    >
+      <div>
+        <p className="font-semibold text-ink">{medicine.name}</p>
+
+        <p className="mt-1 text-xs text-slate-400">
+          Batch {medicine.batchNumber} · ID {medicine.blockchainId}
+        </p>
+      </div>
+
+      <p className="hidden text-sm text-slate-500 md:block">
+        {medicine.manufacturer || 'Network stock'}
+      </p>
+
+      <p className="text-right text-sm font-semibold text-slate-700 md:text-left">
+        {medicine.quantity || 0} units
+      </p>
+
+      <span
+        className={`col-start-2 row-start-1 rounded-full px-2.5 py-1 text-center text-[11px] font-bold md:col-auto md:row-auto ${expired
+          ? 'bg-rose-50 text-rose-600'
+          : 'bg-emerald-50 text-emerald-600'
+          }`}
+      >
+        {expired ? 'Expired' : 'Active'}
+      </span>
+    </button>
+  )
+}
+
+function Layout({ user, children, onLogout }) {
+  const meta = roleMeta[user.role]
+
+  return (
+    <div className="min-h-screen bg-[#f5f7fa]">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white px-5 py-6 lg:flex">
+        <Logo />
+
+        <div className="mt-12">
+          <p className="px-3 text-[11px] font-bold uppercase tracking-[.18em] text-slate-400">
+            Workspace
+          </p>
+
+          <div className="mt-4 rounded-2xl bg-ink p-4 text-white">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-mint font-bold text-ink">
+              {meta.mark}
+            </span>
+
+            <p className="mt-8 font-display text-lg font-bold">
+              {meta.title}
+            </p>
+
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              {meta.text}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-auto">
+          <div className="mb-4 h-px bg-slate-100" />
+
+          <button
+            onClick={onLogout}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-ink"
+          >
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100">
+              ↪
+            </span>
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      <div className="lg:pl-64">
+        <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white/85 px-5 backdrop-blur md:px-10">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-slate-400">
+              {user.role} workspace
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Good to see you,{' '}
+              <span className="font-semibold text-ink">
+                {user.email}
+              </span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:block">
+              ● System operational
+            </span>
+
+            <button
+              onClick={onLogout}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 lg:hidden"
+            >
+              ↪
+            </button>
+
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-ink font-bold text-mint">
+              {user.email[0].toUpperCase()}
+            </div>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-7xl p-5 md:p-10">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+function Heading({ eyebrow, title, description }) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[.2em] text-emerald-600">
+        {eyebrow}
+      </p>
+
+      <h1 className="mt-3 font-display text-4xl font-bold tracking-tight text-ink md:text-5xl">
+        {title}
+      </h1>
+
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 md:text-base">
+        {description}
+      </p>
+    </div>
+  )
+}
+
+function Empty({ text }) {
+  return (
+    <div className="p-12 text-center text-sm text-slate-400">
+      {text}
+    </div>
+  )
+}
+
+function Notice({ title, data, onClear }) {
+  return (
+    <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+      <div className="flex items-center justify-between">
+        <p className="font-semibold text-emerald-800">
+          ✓ {title}
+        </p>
+
+        <button
+          onClick={onClear}
+          className="text-xs font-bold text-emerald-700"
+        >
+          Clear
+        </button>
+      </div>
+
+      <div className="mt-3 grid gap-2 text-xs text-emerald-900">
+        {Object.entries(data)
+          .slice(0, 6)
+          .map(([key, value]) => (
+            <p key={key}>
+              <span className="font-bold capitalize">
+                {key}:{' '}
+              </span>
+              {String(value)}
+            </p>
+          ))}
+      </div>
+    </div>
+  )
+}
+
+function Manufacturer({ user }) {
+  const [medicines, setMedicines] = useState([])
+  const [created, setCreated] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showScanner, setShowScanner] = useState(false)
+  const [scanned, setScanned] = useState(null)
+
+  const [form, setForm] = useState({
+    name: '',
+    batch: '',
+    manufacturingDate: '',
+    expiryDate: '',
+    chemicalComponents: '',
+    description: '',
+    storageConditions: '',
+    dosage: '',
+    price: '',
+    quantity: '',
+  })
+
+  const update = (key) => (event) => {
+    setForm({
+      ...form,
+      [key]: event.target.value,
+    })
+  }
+
+  useEffect(() => {
+    fetch(`${API_URL}/medicines`)
+      .then((res) => res.json())
+      .then(setMedicines)
+      .catch(() => { })
+  }, [])
+
+  const register = async () => {
+    if (
+      !form.name ||
+      !form.batch ||
+      !form.expiryDate ||
+      !form.chemicalComponents
+    ) {
+      return setError(
+        'Name, batch, expiry date, and chemical components are required.'
+      )
+    }
+
+    setLoading(true)
+    setError('')
+
+    const medicine = {
+      name: form.name,
+      batchNumber: form.batch,
+      manufacturer: user.email,
+      manufacturingDate:
+        form.manufacturingDate || new Date().toISOString(),
+      expiryDate: form.expiryDate,
+      chemicalComponents: form.chemicalComponents,
+      description: form.description,
+      storageConditions: form.storageConditions,
+      dosage: form.dosage,
+      price: Number(form.price) || 0,
+      quantity: Number(form.quantity) || 0,
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/medicines/register`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(medicine),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed')
+      }
+
+      setCreated(data.medicine)
+
+      setMedicines([
+        data.medicine,
+        ...medicines,
+      ])
+
+      setForm({
+        name: '',
+        batch: '',
+        manufacturingDate: '',
+        expiryDate: '',
+        chemicalComponents: '',
+        description: '',
+        storageConditions: '',
+        dosage: '',
+        price: '',
+        quantity: '',
+      })
+    } catch (err) {
+      setError(
+        err.message || 'Network error. Is the backend running?'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Heading
+        eyebrow="Manufacturer"
+        title="Production control"
+        description="Register a new batch and create its chain-of-custody identity."
+      />
+
+      <div className="mt-8 grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,.04)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-lg font-bold">
+                Register a medicine
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Required fields are marked with an asterisk.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-mint/10 px-3 py-1 text-xs font-bold text-emerald-700">
+              New batch
+            </span>
+          </div>
+
+          {error && (
+            <div className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {[
+              ['name', 'Medicine name *'],
+              ['batch', 'Batch number *'],
+              ['manufacturingDate', 'Manufacturing date', 'date'],
+              ['expiryDate', 'Expiry date *', 'date'],
+              ['chemicalComponents', 'Chemical components *'],
+              ['description', 'Description'],
+              ['storageConditions', 'Storage conditions'],
+              ['dosage', 'Dosage'],
+              ['price', 'Unit price', 'number'],
+              ['quantity', 'Quantity', 'number'],
+            ].map(([key, label, type = 'text']) => (
+              <Field
+                key={key}
+                label={label}
+                type={type}
+                value={form[key]}
+                onChange={update(key)}
+              />
+            ))}
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button
+              variant="mint"
+              onClick={register}
+              disabled={loading}
+            >
+              {loading ? 'Registering...' : 'Register medicine'} →
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => setShowScanner(!showScanner)}
+            >
+              {showScanner ? 'Close scanner' : 'Scan a batch'}
+            </Button>
+          </div>
+
+          {showScanner && (
+            <div className="mt-6 max-w-sm">
+              <Scanner
+                id="manufacturer-scanner"
+                onScan={setScanned}
+              />
+            </div>
+          )}
+
+          {scanned && (
+            <Notice
+              title="Scanned batch"
+              data={scanned}
+              onClear={() => setScanned(null)}
+            />
+          )}
+        </section>
+
+        <section className="rounded-2xl bg-ink p-6 text-white">
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-mint">
+            Batch identity
+          </p>
+
+          {created ? (
+            <>
+              <h2 className="mt-3 font-display text-2xl font-bold">
+                {created.name}
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-400">
+                Batch {created.batchNumber}
+              </p>
+
+              <div className="mt-8 rounded-2xl bg-white p-5">
+                <QRCodeSVG
+                  value={created.qrCodeData}
+                  size={200}
+                  className="mx-auto h-auto max-w-full"
+                />
+              </div>
+
+              <p className="mt-4 break-all text-xs text-slate-400">
+                Blockchain ID · {created.blockchainId}
+              </p>
+            </>
+          ) : (
+            <div className="flex min-h-72 flex-col justify-end">
+              <div className="grid h-20 w-20 place-items-center rounded-2xl border border-white/10 text-4xl text-mint">
+                ⌁
+              </div>
+
+              <h2 className="mt-8 font-display text-2xl font-bold">
+                Your QR appears here.
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-400">
+                Register a medicine to mint its scannable identity.
+              </p>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,.04)]">
+        <div className="flex items-center justify-between border-b border-slate-100 p-5">
+          <div>
+            <h2 className="font-display text-lg font-bold">
+              Registered medicines
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              {medicines.length} records in the network
+            </p>
+          </div>
+
+          <span className="text-sm text-slate-400">
+            Latest first
+          </span>
+        </div>
+
+        {medicines.length ? (
+          medicines.map((item) => (
+            <MedicineRow
+              key={item._id || item.blockchainId}
+              medicine={item}
+            />
+          ))
+        ) : (
+          <Empty text="No medicines registered yet." />
+        )}
+      </section>
+    </>
+  )
+}
+
+function SupplyDashboard({ user, retailer = false }) {
+
+  const [medicines, setMedicines] = useState([])
+  const [tab, setTab] = useState(
+    retailer ? 'store' : 'available'
+  )
+  const [showOrder, setShowOrder] = useState(false)
+  const [selected, setSelected] = useState(null)
+  const [quantity, setQuantity] = useState('')
+  const [orders, setOrders] = useState([])
+  const [inventory, setInventory] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  const filterUserMedicines = (data) => {
+    return data.filter((m) =>
+      retailer
+        ? m.retailer === user.email
+        : m.distributor === user.email
+    )
+  }
+
+  useEffect(() => {
+    fetch(`${API_URL}/medicines`)
+      .then((res) => res.json())
+      .then((data) => {
+        setMedicines(data)
+
+        const userMedicines = filterUserMedicines(data)
+
+        setOrders(userMedicines)
+        setInventory(userMedicines)
+      })
+      .catch(() => { })
+  }, [user.email, retailer])
+
+  const placeOrder = async () => {
+    if (!selected || !quantity) return
+
+    setLoading(true)
+
+    try {
+      const body = {
+        medicineId: selected._id,
+        quantity: Number(quantity),
+        orderDate: new Date().toISOString(),
+        ...(retailer
+          ? { retailer: user.email }
+          : { distributor: user.email }),
+      }
+
+      const response = await fetch(
+        `${API_URL}/medicines/order`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error()
+      }
+
+      setShowOrder(false)
+      setSelected(null)
+      setQuantity('')
+
+      const data = await fetch(
+        `${API_URL}/medicines`
+      ).then((res) => res.json())
+
+      setMedicines(data)
+
+      const userMedicines = filterUserMedicines(data)
+
+      setOrders(userMedicines)
+      setInventory(userMedicines)
+
+    } catch {
+      alert(
+        'Could not place the order. Check the backend connection.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateStatus = async (medicineId, status) => {
+    setLoading(true)
+
+    try {
+      const response = await fetch(
+        `${API_URL}/medicines/${medicineId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status }),
+        }
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || 'Failed to update medicine status.'
+        )
+      }
+
+      const data = await fetch(
+        `${API_URL}/medicines`
+      ).then((res) => res.json())
+
+      setMedicines(data)
+
+      const userMedicines = filterUserMedicines(data)
+
+      setOrders(userMedicines)
+      setInventory(userMedicines)
+
+    } catch (error) {
+      alert(
+        error.message ||
+        'Could not update the medicine status.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const tabs = retailer
+    ? [
+      ['store', 'Store inventory'],
+      ['available', 'Available stock'],
+      ['orders', 'My orders'],
+      ['verify', 'Verify QR'],
+    ]
+    : [
+      ['available', 'Available stock'],
+      ['orders', 'My orders'],
+      ['inventory', 'My inventory'],
+    ]
+
+  return (
+    <>
+      <Heading
+        eyebrow={
+          retailer
+            ? 'Retail operations'
+            : 'Distribution desk'
+        }
+        title={
+          retailer
+            ? 'Store inventory'
+            : 'Move medicine with confidence'
+        }
+        description={
+          retailer
+            ? 'Keep shelf stock healthy and verify every batch before sale.'
+            : 'Source medicine from manufacturers and track every order in motion.'
+        }
+      />
+
+      <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,.04)]">
+
+        <div className="flex gap-1 overflow-x-auto border-b border-slate-100 p-2">
+
+          {tabs.map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition ${tab === id
+                ? 'bg-ink text-white'
+                : 'text-slate-500 hover:bg-slate-50'
+                }`}
+            >
+              {label}
+            </button>
+          ))}
+
+        </div>
+
+        <div className="p-5 md:p-7">
+
+          {(tab === 'store' || tab === 'inventory') && (
+            <Inventory
+              items={inventory}
+              retailer={retailer}
+              onOrder={() => setTab('available')}
+              onStatusUpdate={updateStatus}
+            />
+          )}
+
+          {tab === 'available' && (
+            <Catalog
+              medicines={medicines}
+              showOrder={showOrder}
+              setShowOrder={setShowOrder}
+              selected={selected}
+              setSelected={setSelected}
+              quantity={quantity}
+              setQuantity={setQuantity}
+              loading={loading}
+              placeOrder={placeOrder}
+            />
+          )}
+
+          {tab === 'orders' && (
+            <div>
+              <h2 className="font-display text-xl font-bold">
+                Order activity
+              </h2>
+
+              {orders.length ? (
+                <div className="mt-5 divide-y divide-slate-100">
+
+                  {orders.map((item, index) => (
+                    <div
+                      key={item._id || index}
+                      className="flex items-center justify-between py-4"
+                    >
+
+                      <div>
+                        <p className="font-semibold">
+                          {item.name}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          Batch {item.batchNumber} ·{' '}
+                          {item.quantity || 0} units
+                        </p>
+                      </div>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold ${item.status === 'Stored'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : item.status === 'Sold'
+                            ? 'bg-slate-100 text-slate-700'
+                            : item.status === 'Recalled'
+                              ? 'bg-red-100 text-red-700'
+                              : item.status === 'Expired'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-cyan/10 text-sky-700'
+                          }`}
+                      >
+                        {item.status || 'InTransit'}
+                      </span>
+
+                    </div>
+                  ))}
+
+                </div>
+              ) : (
+                <Empty text="No orders placed yet." />
+              )}
+            </div>
+          )}
+
+          {tab === 'verify' && (
+            <Verify id="retailer-scanner" />
+          )}
+
+        </div>
+      </div>
+    </>
+  )
+}
+
+function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
+  const [history, setHistory] = useState({})
+  const [historyLoading, setHistoryLoading] = useState(null)
+  const [comparison, setComparison] = useState({})
+  const [comparisonLoading, setComparisonLoading] = useState(null)
+
+  const loadBlockchainHistory = async (medicineId) => {
+    setHistoryLoading(medicineId)
+
+    try {
+      const response = await fetch(
+        `${API_URL}/medicines/${medicineId}/history`
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Failed to fetch blockchain history.'
+        )
+      }
+
+      setHistory((prev) => ({
+        ...prev,
+        [medicineId]: data.history || [],
+      }))
+    } catch (error) {
+      alert(
+        error.message ||
+        'Could not load blockchain history.'
+      )
+    } finally {
+      setHistoryLoading(null)
+    }
+  }
+
+  const loadBlockchainComparison = async (medicineId) => {
+    setComparisonLoading(medicineId)
+
+    try {
+      const response = await fetch(
+        `${API_URL}/medicines/${medicineId}/blockchain`
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Failed to compare blockchain data.'
+        )
+      }
+
+      setComparison((prev) => ({
+        ...prev,
+        [medicineId]: data,
+      }))
+    } catch (error) {
+      alert(
+        error.message ||
+        'Could not load blockchain comparison.'
+      )
+    } finally {
+      setComparisonLoading(null)
+    }
+  }
+
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-xl font-bold">
+            {retailer ? 'Store inventory' : 'My inventory'}
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            {items.length} active stock records
+          </p>
+        </div>
+
+        <Button variant="ghost" onClick={onOrder}>
+          + Place order
+        </Button>
+      </div>
+
+      {items.length ? (
+        <div className="mt-5 overflow-hidden rounded-xl border border-slate-100">
+
+          <div className="hidden grid-cols-[1.4fr_1fr_.7fr_.7fr_.8fr] bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 md:grid">
+            <span>Medicine</span>
+            <span>Batch</span>
+            <span>Stock</span>
+            <span>Expiry</span>
+            <span>Status</span>
+          </div>
+
+          {items.map((item) => (
+            <div key={item._id}>
+
+              <div
+                className="grid grid-cols-2 gap-3 border-b border-slate-100 px-5 py-4 text-sm last:border-0 md:grid-cols-[1.4fr_1fr_.7fr_.7fr_.8fr]"
+              >
+
+                <span className="font-semibold">
+                  {item.name}
+                </span>
+
+                <span className="text-slate-500">
+                  {item.batchNumber}
+                </span>
+
+                <span className="font-semibold text-emerald-600">
+                  {item.quantity || 0}
+                </span>
+
+                <span className="text-slate-500">
+                  {item.expiryDate
+                    ? new Date(
+                      item.expiryDate
+                    ).toLocaleDateString()
+                    : '—'}
+                </span>
+
+                <span className="font-semibold text-sky-600">
+                  {item.status || 'Manufactured'}
+                </span>
+
+                {item.status === 'InTransit' && (
+                  <Button
+                    variant="mint"
+                    onClick={() =>
+                      onStatusUpdate(
+                        item._id,
+                        'Stored'
+                      )
+                    }
+                  >
+                    Mark as stored
+                  </Button>
+                )}
+
+                {item.status === 'Stored' && (
+                  <Button
+                    variant="mint"
+                    onClick={() =>
+                      onStatusUpdate(
+                        item._id,
+                        'Sold'
+                      )
+                    }
+                  >
+                    Mark as sold
+                  </Button>
+                )}
+
+              </div>
+
+              <div className="flex gap-3 border-b border-slate-100 px-5 py-3">
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    loadBlockchainHistory(item._id)
+                  }
+                  disabled={
+                    historyLoading === item._id
+                  }
+                >
+                  {historyLoading === item._id
+                    ? 'Loading history...'
+                    : 'View blockchain history'}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    loadBlockchainComparison(item._id)
+                  }
+                  disabled={
+                    comparisonLoading === item._id
+                  }
+                >
+                  {comparisonLoading === item._id
+                    ? 'Checking...'
+                    : 'Check blockchain integrity'}
+                </Button>
+              </div>
+
+              {history[item._id] && (
+                <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+
+                  <h3 className="font-semibold">
+                    Blockchain History
+                  </h3>
+
+                  {history[item._id].length ? (
+                    <div className="mt-4 space-y-3">
+
+                      {history[item._id].map(
+                        (entry, index) => (
+                          <div
+                            key={index}
+                            className="rounded-xl border border-slate-200 bg-white p-4"
+                          >
+
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold">
+                                {entry.status ||
+                                  entry.action ||
+                                  'Blockchain event'}
+                              </span>
+
+                              <span className="text-xs text-slate-400">
+                                {entry.timestamp
+                                  ? new Date(
+                                    entry.timestamp
+                                  ).toLocaleString()
+                                  : ''}
+                              </span>
+                            </div>
+
+                            {entry.location && (
+                              <p className="mt-1 text-sm text-slate-500">
+                                Storage Conditions: {entry.location}
+                              </p>
+                            )}
+
+                            {entry.transactionHash && (
+                              <p className="mt-2 break-all text-xs text-slate-400">
+                                Transaction:{' '}
+                                {entry.transactionHash}
+                              </p>
+                            )}
+
+                            {entry.blockNumber !==
+                              undefined && (
+                                <p className="mt-1 text-xs text-slate-400">
+                                  Block: {entry.blockNumber}
+                                </p>
+                              )}
+
+                          </div>
+                        )
+                      )}
+
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-slate-500">
+                      No blockchain history available.
+                    </p>
+                  )}
+
+                </div>
+              )}
+
+              {comparison[item._id] && (
+                <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+                  <h3 className="font-semibold">
+                    Database ↔ Blockchain Integrity
+                  </h3>
+
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+
+                    {[
+                      ['Medicine ID', comparison[item._id].database?.medicineId, comparison[item._id].database?.blockchainId],
+                      ['Medicine Name', comparison[item._id].database?.name, comparison[item._id].blockchain?.name],
+                      ['Manufacturer', comparison[item._id].database?.manufacturer, comparison[item._id].blockchain?.manufacturer],
+                      ['Batch Number', comparison[item._id].database?.batchNumber, item.batchNumber],
+                      ['Manufacturing Date', comparison[item._id].database?.manufacturingDate, comparison[item._id].blockchain?.manufacturingDate],
+                      ['Expiry Date', comparison[item._id].database?.expiryDate, comparison[item._id].blockchain?.expiryDate],
+                      ['Status', comparison[item._id].database?.status, comparison[item._id].blockchain?.status],
+                      ['Storage Conditions', comparison[item._id].database?.storageConditions, comparison[item._id].blockchain?.currentLocation],
+                    ].map(([label, databaseValue, blockchainValue]) => {
+                      const match =
+                        String(databaseValue ?? '') ===
+                        String(blockchainValue ?? '')
+
+                      return (
+                        <div
+                          key={label}
+                          className="flex items-center justify-between gap-4 border-b border-slate-100 py-3 last:border-0"
+                        >
+                          <span className="text-sm font-medium text-slate-600">
+                            {label}
+                          </span>
+
+                          <span
+                            className={`text-sm font-semibold ${match
+                                ? 'text-emerald-600'
+                                : 'text-red-600'
+                              }`}
+                          >
+                            {match ? '✓ Match' : '✗ Mismatch'}
+                          </span>
+                        </div>
+                      )
+                    })}
+
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <p className="text-xs text-slate-400">
+                        Blockchain network: {comparison[item._id].database?.blockchainNetwork || '—'}
+                      </p>
+
+                      <p className="mt-1 break-all text-xs text-slate-400">
+                        Transaction: {comparison[item._id].database?.blockchainTransactionHash || '—'}
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        Block: {comparison[item._id].database?.blockchainBlockNumber ?? '—'}
+                      </p>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+            </div>
+          ))}
+
+        </div>
+      ) : (
+        <Empty text="No inventory items yet." />
+      )}
+    </div>
+  )
+}
+function Catalog({
+  medicines,
+  showOrder,
+  setShowOrder,
+  selected,
+  setSelected,
+  quantity,
+  setQuantity,
+  loading,
+  placeOrder,
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-xl font-bold">
+            Available medicine
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Verified stock from your upstream network.
+          </p>
+        </div>
+
+        <Button
+          variant="mint"
+          onClick={() => setShowOrder(!showOrder)}
+        >
+          {showOrder ? 'Cancel' : 'Place an order'} →
+        </Button>
+      </div>
+
+      {showOrder && (
+        <div className="mt-6 rounded-2xl border border-mint/30 bg-mint/5 p-5">
+          <p className="font-semibold">Build an order</p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px_auto]">
+            <select
+              value={selected?._id || ''}
+              onChange={(e) =>
+                setSelected(
+                  medicines.find(
+                    (item) =>
+                      item._id === e.target.value
+                  )
+                )
+              }
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="">Select a medicine</option>
+
+              {medicines.map((item) => (
+                <option key={item._id} value={item._id}>
+                  {item.name} · {item.quantity || 0} units
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              min="1"
+              placeholder="Quantity"
+              value={quantity}
+              onChange={(e) =>
+                setQuantity(e.target.value)
+              }
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            />
+
+            <Button
+              onClick={placeOrder}
+              disabled={loading || !selected}
+            >
+              {loading
+                ? 'Processing...'
+                : 'Confirm order'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {medicines.length ? (
+          medicines.map((item) => (
+            <button
+              onClick={() => {
+                setSelected(item)
+                setShowOrder(true)
+              }}
+              key={item._id}
+              className="rounded-2xl border border-slate-200 p-5 text-left transition hover:-translate-y-0.5 hover:border-mint hover:shadow-lg"
+            >
+              <div className="flex items-start justify-between">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan/10 font-bold text-sky-700">
+                  {item.name?.[0] || 'M'}
+                </span>
+
+                <span className="text-xs font-bold text-emerald-600">
+                  In stock
+                </span>
+              </div>
+
+              <h3 className="mt-6 font-display text-lg font-bold">
+                {item.name}
+              </h3>
+
+              <p className="mt-1 text-xs text-slate-400">
+                Batch {item.batchNumber}
+              </p>
+
+              <div className="mt-5 flex justify-between border-t border-slate-100 pt-4 text-sm">
+                <span className="text-slate-500">
+                  Available {item.quantity || 0}
+                </span>
+
+                <span className="font-bold">
+                  ${item.price || 0} / unit
+                </span>
+              </div>
+            </button>
+          ))
+        ) : (
+          <Empty text="No medicine available yet." />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* =========================================================
+   VERIFY MEDICINE
+   ========================================================= */
+
+function Verify({ id }) {
+  const [show, setShow] = useState(false)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [history, setHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [medicines, setMedicines] = useState([])
+  const [selectedMedicineId, setSelectedMedicineId] = useState('')
+  const [medicineLoading, setMedicineLoading] = useState(false)
+
+  /*
+   * Verify a medicine using its medicineId.
+   * This is used by both the real QR scanner
+   * and the Test verification button.
+   */
+  const handleScan = async (qrData) => {
+    setLoading(true)
+    setError('')
+    setData(null)
+
+    try {
+      const medicineId = qrData?.medicineId
+
+      if (!medicineId) {
+        throw new Error(
+          'Invalid MedChain QR code. Medicine ID not found.'
+        )
+      }
+
+      const response = await fetch(
+        `${API_URL}/medicines/verify/${encodeURIComponent(
+          medicineId
+        )}`
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || 'Medicine verification failed.'
+        )
+      }
+
+      setData(result)
+
+      /*
+       * Refresh history after every successful verification
+       * so the newest scan appears immediately.
+       */
+      await loadHistory()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /*
+   * Load verification history from MongoDB.
+   */
+  const loadHistory = async () => {
+    setHistoryLoading(true)
+
+    try {
+      const response = await fetch(
+        `${API_URL}/medicines/verification-history`
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || 'Failed to load scan history.'
+        )
+      }
+
+      setHistory(result)
+    } catch (err) {
+      console.error(
+        'Failed to load scan history:',
+        err
+      )
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  /*
+ * Load all registered medicines for Test verification.
+ */
+  const loadMedicines = async () => {
+    setMedicineLoading(true)
+
+    try {
+      const response = await fetch(
+        `${API_URL}/medicines`
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || 'Failed to load medicines.'
+        )
+      }
+
+      setMedicines(result)
+
+      if (result.length > 0) {
+        setSelectedMedicineId(result[0].medicineId)
+      }
+    } catch (err) {
+      console.error(
+        'Failed to load medicines:',
+        err
+      )
+    } finally {
+      setMedicineLoading(false)
+    }
+  }
+
+  /*
+   * Load existing history when Verify opens.
+   */
+  useEffect(() => {
+    loadHistory()
+    loadMedicines()
+  }, [])
+
+  return (
+    <div className="max-w-2xl">
+      <h2 className="font-display text-xl font-bold">
+        Verify medicine authenticity
+      </h2>
+
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        Scan a MedChain QR identity to verify the medicine
+        against MongoDB and the blockchain.
+      </p>
+
+      {/* =====================================================
+          SCANNER BUTTONS
+         ===================================================== */}
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-slate-700">
+          Select medicine for test verification
+        </label>
+
+        <select
+          value={selectedMedicineId}
+          onChange={(e) => setSelectedMedicineId(e.target.value)}
+          disabled={medicineLoading}
+          className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+        >
+          {medicineLoading ? (
+            <option value="">Loading medicines...</option>
+          ) : (
+            medicines.map((medicine) => (
+              <option
+                key={medicine.medicineId}
+                value={medicine.medicineId}
+              >
+                {medicine.name} — {medicine.batchNumber}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
+
+
+      <div className="mt-6 flex items-center gap-4">
+        <Button
+          variant="mint"
+          onClick={() => {
+            setShow(!show)
+            setError('')
+          }}
+        >
+          {show ? 'Close scanner' : 'Open scanner'} →
+        </Button>
+
+        <Button
+          variant="mint"
+          onClick={() => {
+            if (!selectedMedicineId) {
+              setError('Please select a medicine first.')
+              return
+            }
+
+            handleScan({
+              medicineId: selectedMedicineId,
+            })
+          }}
+          disabled={medicineLoading || !selectedMedicineId}
+        >
+          Test verification
+        </Button>
+      </div>
+
+      {/* =====================================================
+          REAL QR SCANNER
+         ===================================================== */}
+
+      {show && (
+        <div className="mt-6 max-w-sm">
+          <Scanner
+            id={id}
+            onScan={handleScan}
+          />
+        </div>
+      )}
+
+      {/* =====================================================
+          VERIFICATION LOADING
+         ===================================================== */}
+
+      {loading && (
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 text-sm">
+          Verifying medicine on MedChain...
+        </div>
+      )}
+
+      {/* =====================================================
+          VERIFICATION ERROR
+         ===================================================== */}
+
+      {error && (
+        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* =====================================================
+          VERIFICATION RESULT
+         ===================================================== */}
+
+      {data && (
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+          {data.result === 'AUTHENTIC' && (
+            <>
+              <div className="text-2xl font-bold text-emerald-600">
+                ✓ AUTHENTIC MEDICINE
+              </div>
+
+              <p className="mt-2 text-sm text-slate-500">
+                This medicine is registered and verified
+                against the MedChain blockchain.
+              </p>
+            </>
+          )}
+
+          {data.result === 'SUSPICIOUS' && (
+            <>
+              <div className="text-2xl font-bold text-amber-600">
+                ⚠ SUSPICIOUS MEDICINE
+              </div>
+
+              <p className="mt-2 text-sm text-slate-500">
+                The medicine requires further investigation.
+              </p>
+            </>
+          )}
+
+          {data.result === 'COUNTERFEIT' && (
+            <>
+              <div className="text-2xl font-bold text-red-600">
+                ✕ VERIFICATION FAILED
+              </div>
+
+              <p className="mt-2 text-sm text-slate-500">
+                This medicine identity could not be verified
+                on the MedChain blockchain.
+              </p>
+            </>
+          )}
+
+          {data.medicine && (
+            <div className="mt-6 space-y-2 text-sm">
+              <div>
+                <strong>Medicine ID:</strong>{' '}
+                {data.medicine.medicineId}
+              </div>
+
+              <div>
+                <strong>Medicine:</strong>{' '}
+                {data.medicine.name}
+              </div>
+
+              <div>
+                <strong>Batch:</strong>{' '}
+                {data.medicine.batchNumber}
+              </div>
+
+              <div>
+                <strong>Manufacturer:</strong>{' '}
+                {data.medicine.manufacturer}
+              </div>
+
+              <div>
+                <strong>Status:</strong>{' '}
+                {data.medicine.status}
+              </div>
+
+              <div>
+                <strong>Expiry:</strong>{' '}
+                {new Date(
+                  data.medicine.expiryDate
+                ).toLocaleDateString()}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 border-t border-slate-200 pt-4">
+            <div className="text-sm font-semibold">
+              Verification checks
+            </div>
+
+            <div className="mt-3 space-y-2 text-sm">
+              <div>
+                Blockchain registered:{' '}
+                {data.checks.registered ? '✓' : '✕'}
+              </div>
+
+              <div>
+                Blockchain match:{' '}
+                {data.checks.blockchainMatch ? '✓' : '✕'}
+              </div>
+
+              <div>
+                Not expired:{' '}
+                {data.checks.notExpired ? '✓' : '✕'}
+              </div>
+
+              <div>
+                Valid status:{' '}
+                {data.checks.validStatus ? '✓' : '✕'}
+              </div>
+            </div>
+          </div>
+
+          <Button
+            variant="mint"
+            className="mt-6"
+            onClick={() => setData(null)}
+          >
+            Clear result
+          </Button>
+        </div>
+      )}
+
+      {/* =====================================================
+          SCAN HISTORY
+          This is intentionally OUTSIDE {data && (...)}
+          so it always appears.
+         ===================================================== */}
+
+      <div className="mt-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold">
+              Scan History
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Recent medicine verification scans.
+            </p>
+          </div>
+
+          <Button
+            variant="mint"
+            onClick={loadHistory}
+            disabled={historyLoading}
+          >
+            {historyLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
+
+        {historyLoading && history.length === 0 && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">
+            Loading scan history...
+          </div>
+        )}
+
+        {!historyLoading && history.length === 0 && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">
+            No verification scans yet.
+          </div>
+        )}
+
+        {history.length > 0 && (
+          <div className="mt-4 space-y-3">
+            {history.map((scan) => (
+              <div
+                key={scan._id}
+                className="rounded-2xl border border-slate-200 bg-white p-5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="font-semibold">
+                      {scan.medicineName ||
+                        'Unknown medicine'}
+                    </div>
+
+                    <div className="mt-1 text-sm text-slate-500">
+                      Batch:{' '}
+                      {scan.batchNumber || 'Unknown'}
+                    </div>
+
+                    <div className="text-sm text-slate-500">
+                      Manufacturer:{' '}
+                      {scan.manufacturer || 'Unknown'}
+                    </div>
+                  </div>
+
+                  <div
+                    className={`text-sm font-bold ${scan.result === 'AUTHENTIC'
+                      ? 'text-emerald-600'
+                      : scan.result === 'SUSPICIOUS'
+                        ? 'text-amber-600'
+                        : 'text-red-600'
+                      }`}
+                  >
+                    {scan.result}
+                  </div>
+                </div>
+
+                <div className="mt-3 text-xs text-slate-400">
+                  {new Date(
+                    scan.verifiedAt
+                  ).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* =========================================================
+   CONSUMER
+   ========================================================= */
+
+function Consumer() {
+  const [medicines, setMedicines] = useState([])
+  const [term, setTerm] = useState('')
+  const [selected, setSelected] = useState(null)
+  const [tab, setTab] = useState('search')
+
+  useEffect(() => {
+    fetch(`${API_URL}/medicines`)
+      .then((res) => res.json())
+      .then(setMedicines)
+      .catch(() => { })
+  }, [])
+
+  const filtered = useMemo(
+    () =>
+      medicines.filter((item) =>
+        `${item.name} ${item.batchNumber}`
+          .toLowerCase()
+          .includes(term.toLowerCase())
+      ),
+    [medicines, term]
+  )
+
+  return (
+    <>
+      <Heading
+        eyebrow="Patient trust center"
+        title="Know what you’re taking"
+        description="Search the live medicine network or scan a batch identity before it reaches your cabinet."
+      />
+
+      <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,.04)]">
+        <div className="flex gap-1 border-b border-slate-100 p-2">
+          <button
+            onClick={() => setTab('search')}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'search'
+              ? 'bg-ink text-white'
+              : 'text-slate-500'
+              }`}
+          >
+            Search network
+          </button>
+
+          <button
+            onClick={() => setTab('verify')}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'verify'
+              ? 'bg-ink text-white'
+              : 'text-slate-500'
+              }`}
+          >
+            Verify with QR
+          </button>
+        </div>
+
+        <div className="p-5 md:p-7">
+          {tab === 'search' ? (
+            <>
+              <div className="relative">
+                <span className="absolute left-4 top-3 text-slate-400">
+                  ⌕
+                </span>
+
+                <input
+                  value={term}
+                  onChange={(e) =>
+                    setTerm(e.target.value)
+                  }
+                  placeholder="Search medicine name or batch number..."
+                  className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm outline-none focus:border-mint focus:bg-white"
+                />
+              </div>
+
+              <div className="mt-6 overflow-hidden rounded-xl border border-slate-100">
+                <div className="hidden grid-cols-[1fr_1fr_.8fr_.6fr] bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 md:grid">
+                  <span>Medicine</span>
+                  <span>Manufacturer</span>
+                  <span>Stock</span>
+                  <span>Status</span>
+                </div>
+
+                {filtered.length ? (
+                  filtered.map((item) => (
+                    <MedicineRow
+                      key={item._id}
+                      medicine={item}
+                      onClick={() =>
+                        setSelected(item)
+                      }
+                    />
+                  ))
+                ) : (
+                  <Empty text="No medicines match that search." />
+                )}
+              </div>
+            </>
+          ) : (
+            <Verify id="consumer-scanner" />
+          )}
+        </div>
+      </div>
+
+      {selected && (
+        <div
+          className="fixed inset-0 z-20 grid place-items-center bg-ink/60 p-5 backdrop-blur-sm"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-white p-7 shadow-2xl"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-600">
+                  Verified record
+                </p>
+
+                <h2 className="mt-2 font-display text-3xl font-bold">
+                  {selected.name}
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Batch {selected.batchNumber}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSelected(null)}
+                className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-500"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              {[
+                ['Manufacturer', selected.manufacturer],
+                ['Blockchain ID', selected.blockchainId],
+                ['Components', selected.chemicalComponents],
+                ['Dosage', selected.dosage || 'Not specified'],
+                [
+                  'Manufactured',
+                  selected.manufacturingDate &&
+                  new Date(
+                    selected.manufacturingDate
+                  ).toLocaleDateString(),
+                ],
+                [
+                  'Expires',
+                  selected.expiryDate &&
+                  new Date(
+                    selected.expiryDate
+                  ).toLocaleDateString(),
+                ],
+                [
+                  'Storage',
+                  selected.storageConditions ||
+                  'Not specified',
+                ],
+                [
+                  'Quantity',
+                  `${selected.quantity || 0} units`,
+                ],
+              ].map(([label, value]) => (
+                <div
+                  className="rounded-xl bg-slate-50 p-4"
+                  key={label}
+                >
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                    {label}
+                  </p>
+
+                  <p className="mt-2 text-sm font-semibold text-ink">
+                    {value || '—'}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              className="mt-7 w-full"
+              onClick={() => setSelected(null)}
+            >
+              Close record
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+/* =========================================================
+   STATS
+   ========================================================= */
+
+function Stat({
+  label,
+  value,
+  hint,
+  tone = 'mint',
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,.04)]">
+      <div className="mb-5 flex items-center justify-between">
+        <span
+          className={`h-2.5 w-2.5 rounded-full ${tone === 'mint'
+            ? 'bg-mint'
+            : tone === 'amber'
+              ? 'bg-amber-400'
+              : 'bg-cyan'
+            }`}
+        />
+
+        <span className="text-xs font-semibold uppercase tracking-[.16em] text-slate-400">
+          {hint}
+        </span>
+      </div>
+
+      <p className="font-display text-3xl font-bold text-ink">
+        {value}
+      </p>
+
+      <p className="mt-1 text-sm text-slate-500">
+        {label}
+      </p>
+    </div>
+  )
+}
+
+/* =========================================================
+   ADMIN PANEL
+   ========================================================= */
 
 function AdminPanel() {
   const [medicines, setMedicines] = useState([])
-  const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem('medchain-users') || '[]'))
+
+  const [users, setUsers] = useState(() =>
+    JSON.parse(
+      localStorage.getItem('medchain-users') || '[]'
+    )
+  )
+
   const [tab, setTab] = useState('orders')
   const [selected, setSelected] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -73,31 +2418,577 @@ function AdminPanel() {
   const [passwordDrafts, setPasswordDrafts] = useState({})
 
   const loadMedicines = async () => {
-    const response = await fetch(`${API_URL}/medicines`)
-    if (!response.ok) throw new Error('Could not load medicines')
+    const response = await fetch(
+      `${API_URL}/medicines`
+    )
+
+    if (!response.ok) {
+      throw new Error('Could not load medicines')
+    }
+
     setMedicines(await response.json())
   }
 
-  useEffect(() => { loadMedicines().catch(() => setNotice('Backend is unavailable. Start the API on port 5000.')) }, [])
+  useEffect(() => {
+    loadMedicines().catch(() =>
+      setNotice(
+        'Backend is unavailable. Start the API on port 5000.'
+      )
+    )
+  }, [])
 
-  const updateMedicine = async (medicine, updates) => {
+  const updateMedicine = async (
+    medicine,
+    updates
+  ) => {
     setSaving(true)
+
     try {
-      const response = await fetch(`${API_URL}/medicines/${medicine._id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
+      const response = await fetch(
+        `${API_URL}/medicines/${medicine._id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        }
+      )
+
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Update failed')
-      setMedicines((items) => items.map((item) => item._id === medicine._id ? data.medicine : item))
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Update failed'
+        )
+      }
+
+      setMedicines((items) =>
+        items.map((item) =>
+          item._id === medicine._id
+            ? data.medicine
+            : item
+        )
+      )
+
       setSelected(data.medicine)
-      setNotice('Medicine updated and blockchain status synchronized.')
-    } catch (error) { setNotice(error.message) } finally { setSaving(false) }
+
+      setNotice(
+        'Medicine updated and blockchain status synchronized.'
+      )
+    } catch (error) {
+      setNotice(error.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const acceptOrder = (medicine) => updateMedicine(medicine, { status: 'Stored' })
-  const pendingOrders = medicines.filter((medicine) => medicine.status === 'InTransit' && medicine.orderedQuantity)
-  const saveRole = (email, role) => { const next = users.map((user) => user.email === email ? { ...user, role } : user); setUsers(next); localStorage.setItem('medchain-users', JSON.stringify(next)) }
-  const resetPassword = (email) => { const password = passwordDrafts[email] || ''; if (password.length < 6) return setNotice('Use at least 6 characters for a password.'); const next = users.map((user) => user.email === email ? { ...user, password } : user); setUsers(next); localStorage.setItem('medchain-users', JSON.stringify(next)); setPasswordDrafts({ ...passwordDrafts, [email]: '' }); setNotice('Password reset successfully.') }
+  const acceptOrder = (medicine) =>
+    updateMedicine(medicine, {
+      status: 'Stored',
+    })
 
-  return <><Heading eyebrow="Restricted workspace" title="Super Admin control" description="Monitor users, accept supply-chain orders, and maintain medicine records from one operational console." /><div className="mt-8 grid gap-4 md:grid-cols-3"><Stat label="Registered medicines" value={medicines.length} hint="Network" /><Stat label="Orders awaiting acceptance" value={pendingOrders.length} hint="Action needed" tone="amber" /><Stat label="Known local accounts" value={users.length} hint="Directory" tone="cyan" /></div>{notice && <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{notice}</div>}<div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,.04)]"><div className="flex gap-1 overflow-x-auto border-b border-slate-100 p-2"><button onClick={() => setTab('orders')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'orders' ? 'bg-ink text-white' : 'text-slate-500'}`}>Order approvals</button><button onClick={() => setTab('medicines')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'medicines' ? 'bg-ink text-white' : 'text-slate-500'}`}>Medicine records</button><button onClick={() => setTab('users')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'users' ? 'bg-ink text-white' : 'text-slate-500'}`}>User directory</button></div><div className="p-5 md:p-7">{tab === 'orders' && <div><h2 className="font-display text-xl font-bold">Accept incoming orders</h2><p className="mt-2 text-sm text-slate-500">Acceptance changes the record to Stored and writes the status update to Ethereum.</p>{pendingOrders.length ? <div className="mt-5 divide-y divide-slate-100">{pendingOrders.map((medicine) => <div key={medicine._id} className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between"><div><p className="font-semibold text-ink">{medicine.name}</p><p className="mt-1 text-xs text-slate-500">Batch {medicine.batchNumber} · {medicine.orderedQuantity} units · {medicine.distributor || medicine.retailer}</p></div><Button variant="mint" onClick={() => acceptOrder(medicine)} disabled={saving}>Accept order →</Button></div>)}</div> : <Empty text="No orders are waiting for acceptance." />}</div>}{tab === 'medicines' && <div><div className="flex items-center justify-between"><div><h2 className="font-display text-xl font-bold">All medicine records</h2><p className="mt-2 text-sm text-slate-500">Select a record to update its operational details.</p></div><Button variant="ghost" onClick={() => loadMedicines().catch(() => setNotice('Could not refresh records.'))}>Refresh</Button></div><div className="mt-5 overflow-hidden rounded-xl border border-slate-100">{medicines.length ? medicines.map((medicine) => <MedicineRow key={medicine._id} medicine={medicine} onClick={() => setSelected(medicine)} />) : <Empty text="No medicine records found." />}</div></div>}{tab === 'users' && <div><h2 className="font-display text-xl font-bold">User directory</h2><p className="mt-2 text-sm text-slate-500">Passwords are intentionally hidden. Reset credentials through a secure auth flow instead of exposing them.</p><div className="mt-5 overflow-hidden rounded-xl border border-slate-100">{users.length ? users.map((user) => <div className="grid gap-3 border-b border-slate-100 px-5 py-4 md:grid-cols-[1fr_180px_150px] md:items-center" key={user.email}><div><p className="font-semibold">{user.email}</p><p className="mt-1 text-xs text-slate-400">Login ID · {user.email}</p></div><div className="flex items-center gap-2"><input type="password" value={passwordDrafts[user.email] || ""} onChange={(event) => setPasswordDrafts({ ...passwordDrafts, [user.email]: event.target.value })} placeholder="New password" className="w-32 rounded-lg border border-slate-200 px-3 py-2 text-sm" /><button onClick={() => resetPassword(user.email)} className="rounded-lg bg-ink px-3 py-2 text-xs font-semibold text-white">Reset</button></div><select value={user.role} onChange={(event) => saveRole(user.email, event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm">{roles.map((role) => <option key={role}>{role}</option>)}</select></div>) : <Empty text="No registered accounts yet." />}</div></div>}</div></div>{selected && <div className="fixed inset-0 z-20 grid place-items-center bg-ink/60 p-5 backdrop-blur-sm" onClick={() => setSelected(null)}><div onClick={(event) => event.stopPropagation()} className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-600">Admin edit</p><h2 className="mt-2 font-display text-2xl font-bold">{selected.name}</h2><p className="mt-1 text-sm text-slate-500">Batch {selected.batchNumber}</p></div><button onClick={() => setSelected(null)} className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-500">×</button></div><div className="mt-6 grid gap-4 sm:grid-cols-2"><Field label="Medicine name" value={selected.name} onChange={(event) => setSelected({ ...selected, name: event.target.value })} /><Field label="Quantity" type="number" value={selected.quantity || 0} onChange={(event) => setSelected({ ...selected, quantity: Number(event.target.value) })} /><Field label="Price" type="number" value={selected.price || 0} onChange={(event) => setSelected({ ...selected, price: Number(event.target.value) })} /><label className="grid gap-2 text-sm font-semibold text-slate-600">Status<select value={selected.status} onChange={(event) => setSelected({ ...selected, status: event.target.value })} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal">{['Manufactured', 'InTransit', 'Stored', 'Sold', 'Expired', 'Recalled'].map((status) => <option key={status}>{status}</option>)}</select></label></div><Button className="mt-7 w-full" onClick={() => updateMedicine(selected, { name: selected.name, quantity: selected.quantity, price: selected.price, status: selected.status })} disabled={saving}>{saving ? 'Saving...' : 'Save record and sync blockchain'}</Button></div></div>}</>
+  const pendingOrders = medicines.filter(
+    (medicine) =>
+      medicine.status === 'InTransit' &&
+      medicine.orderedQuantity
+  )
+
+  const saveRole = (email, role) => {
+    const next = users.map((user) =>
+      user.email === email
+        ? { ...user, role }
+        : user
+    )
+
+    setUsers(next)
+
+    localStorage.setItem(
+      'medchain-users',
+      JSON.stringify(next)
+    )
+  }
+
+  const resetPassword = (email) => {
+    const password = passwordDrafts[email] || ''
+
+    if (password.length < 6) {
+      return setNotice(
+        'Use at least 6 characters for a password.'
+      )
+    }
+
+    const next = users.map((user) =>
+      user.email === email
+        ? { ...user, password }
+        : user
+    )
+
+    setUsers(next)
+
+    localStorage.setItem(
+      'medchain-users',
+      JSON.stringify(next)
+    )
+
+    setPasswordDrafts({
+      ...passwordDrafts,
+      [email]: '',
+    })
+
+    setNotice('Password reset successfully.')
+  }
+
+  return (
+    <>
+      <Heading
+        eyebrow="Restricted workspace"
+        title="Super Admin control"
+        description="Monitor users, accept supply-chain orders, and maintain medicine records from one operational console."
+      />
+
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <Stat
+          label="Registered medicines"
+          value={medicines.length}
+          hint="Network"
+        />
+
+        <Stat
+          label="Orders awaiting acceptance"
+          value={pendingOrders.length}
+          hint="Action needed"
+          tone="amber"
+        />
+
+        <Stat
+          label="Known local accounts"
+          value={users.length}
+          hint="Directory"
+          tone="cyan"
+        />
+      </div>
+
+      {notice && (
+        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {notice}
+        </div>
+      )}
+
+      <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,.04)]">
+        <div className="flex gap-1 overflow-x-auto border-b border-slate-100 p-2">
+          <button
+            onClick={() => setTab('orders')}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'orders'
+              ? 'bg-ink text-white'
+              : 'text-slate-500'
+              }`}
+          >
+            Order approvals
+          </button>
+
+          <button
+            onClick={() => setTab('medicines')}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'medicines'
+              ? 'bg-ink text-white'
+              : 'text-slate-500'
+              }`}
+          >
+            Medicine records
+          </button>
+
+          <button
+            onClick={() => setTab('users')}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${tab === 'users'
+              ? 'bg-ink text-white'
+              : 'text-slate-500'
+              }`}
+          >
+            User directory
+          </button>
+        </div>
+
+        <div className="p-5 md:p-7">
+          {tab === 'orders' && (
+            <div>
+              <h2 className="font-display text-xl font-bold">
+                Accept incoming orders
+              </h2>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Acceptance changes the record to Stored and
+                writes the status update to Ethereum.
+              </p>
+
+              {pendingOrders.length ? (
+                <div className="mt-5 divide-y divide-slate-100">
+                  {pendingOrders.map((medicine) => (
+                    <div
+                      key={medicine._id}
+                      className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between"
+                    >
+                      <div>
+                        <p className="font-semibold text-ink">
+                          {medicine.name}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          Batch {medicine.batchNumber} ·{' '}
+                          {medicine.orderedQuantity} units ·{' '}
+                          {medicine.distributor ||
+                            medicine.retailer}
+                        </p>
+                      </div>
+
+                      <Button
+                        variant="mint"
+                        onClick={() =>
+                          acceptOrder(medicine)
+                        }
+                        disabled={saving}
+                      >
+                        Accept order →
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Empty text="No orders are waiting for acceptance." />
+              )}
+            </div>
+          )}
+
+          {tab === 'medicines' && (
+            <div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-xl font-bold">
+                    All medicine records
+                  </h2>
+
+                  <p className="mt-2 text-sm text-slate-500">
+                    Select a record to update its operational
+                    details.
+                  </p>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    loadMedicines().catch(() =>
+                      setNotice(
+                        'Could not refresh records.'
+                      )
+                    )
+                  }
+                >
+                  Refresh
+                </Button>
+              </div>
+
+              <div className="mt-5 overflow-hidden rounded-xl border border-slate-100">
+                {medicines.length ? (
+                  medicines.map((medicine) => (
+                    <MedicineRow
+                      key={medicine._id}
+                      medicine={medicine}
+                      onClick={() =>
+                        setSelected(medicine)
+                      }
+                    />
+                  ))
+                ) : (
+                  <Empty text="No medicine records found." />
+                )}
+              </div>
+            </div>
+          )}
+
+          {tab === 'users' && (
+            <div>
+              <h2 className="font-display text-xl font-bold">
+                User directory
+              </h2>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Passwords are intentionally hidden. Reset
+                credentials through a secure auth flow instead
+                of exposing them.
+              </p>
+
+              <div className="mt-5 overflow-hidden rounded-xl border border-slate-100">
+                {users.length ? (
+                  users.map((user) => (
+                    <div
+                      className="grid gap-3 border-b border-slate-100 px-5 py-4 md:grid-cols-[1fr_180px_150px] md:items-center"
+                      key={user.email}
+                    >
+                      <div>
+                        <p className="font-semibold">
+                          {user.email}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          Login ID · {user.email}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="password"
+                          value={
+                            passwordDrafts[user.email] || ''
+                          }
+                          onChange={(event) =>
+                            setPasswordDrafts({
+                              ...passwordDrafts,
+                              [user.email]:
+                                event.target.value,
+                            })
+                          }
+                          placeholder="New password"
+                          className="w-32 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        />
+
+                        <button
+                          onClick={() =>
+                            resetPassword(user.email)
+                          }
+                          className="rounded-lg bg-ink px-3 py-2 text-xs font-semibold text-white"
+                        >
+                          Reset
+                        </button>
+                      </div>
+
+                      <select
+                        value={user.role}
+                        onChange={(event) =>
+                          saveRole(
+                            user.email,
+                            event.target.value
+                          )
+                        }
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      >
+                        {roles.map((role) => (
+                          <option key={role}>
+                            {role}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))
+                ) : (
+                  <Empty text="No registered accounts yet." />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {selected && (
+        <div
+          className="fixed inset-0 z-20 grid place-items-center bg-ink/60 p-5 backdrop-blur-sm"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+            className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-600">
+                  Admin edit
+                </p>
+
+                <h2 className="mt-2 font-display text-2xl font-bold">
+                  {selected.name}
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Batch {selected.batchNumber}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSelected(null)}
+                className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-500"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Medicine name"
+                value={selected.name}
+                onChange={(event) =>
+                  setSelected({
+                    ...selected,
+                    name: event.target.value,
+                  })
+                }
+              />
+
+              <Field
+                label="Quantity"
+                type="number"
+                value={selected.quantity || 0}
+                onChange={(event) =>
+                  setSelected({
+                    ...selected,
+                    quantity: Number(
+                      event.target.value
+                    ),
+                  })
+                }
+              />
+
+              <Field
+                label="Price"
+                type="number"
+                value={selected.price || 0}
+                onChange={(event) =>
+                  setSelected({
+                    ...selected,
+                    price: Number(
+                      event.target.value
+                    ),
+                  })
+                }
+              />
+
+              <label className="grid gap-2 text-sm font-semibold text-slate-600">
+                Status
+
+                <select
+                  value={selected.status}
+                  onChange={(event) =>
+                    setSelected({
+                      ...selected,
+                      status: event.target.value,
+                    })
+                  }
+                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal"
+                >
+                  {[
+                    'Manufactured',
+                    'InTransit',
+                    'Stored',
+                    'Sold',
+                    'Expired',
+                    'Recalled',
+                  ].map((status) => (
+                    <option key={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <Button
+              className="mt-7 w-full"
+              onClick={() =>
+                updateMedicine(selected, {
+                  name: selected.name,
+                  quantity: selected.quantity,
+                  price: selected.price,
+                  status: selected.status,
+                })
+              }
+              disabled={saving}
+            >
+              {saving
+                ? 'Saving...'
+                : 'Save record and sync blockchain'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+/* =========================================================
+   MAIN APP
+   ========================================================= */
+
+function App() {
+  const [user, setUser] = useState(null)
+  const [auth, setAuth] = useState(null)
+
+  if (!user) {
+    if (auth) {
+      return (
+        <Auth
+          {...auth}
+          onBack={() => setAuth(null)}
+          onLogin={setUser}
+          onSignup={(email, password, role) =>
+            setUser({
+              email,
+              password,
+              role,
+            })
+          }
+        />
+      )
+    }
+
+    return (
+      <Landing
+        onRole={(role) =>
+          setAuth({
+            mode: 'login',
+            role,
+          })
+        }
+        onSignup={() =>
+          setAuth({
+            mode: 'signup',
+          })
+        }
+        onAdmin={() =>
+          setAuth({
+            mode: 'login',
+            role: adminRole,
+          })
+        }
+      />
+    )
+  }
+
+  const content =
+    user.role === adminRole ? (
+      <AdminPanel />
+    ) : user.role === 'Manufacturer' ? (
+      <Manufacturer user={user} />
+    ) : user.role === 'Consumer' ? (
+      <Consumer />
+    ) : (
+      <SupplyDashboard
+        user={user}
+        retailer={user.role === 'Retailer'}
+      />
+    )
+
+  return (
+    <Layout
+      user={user}
+      onLogout={() => setUser(null)}
+    >
+      {content}
+
+      <p className="mt-10 text-center text-xs text-slate-400">
+        MedChain network · Connected to local API at{' '}
+        {API_URL}
+      </p>
+    </Layout>
+  )
 }
 
 export default App

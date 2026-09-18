@@ -27,7 +27,7 @@ router.post('/register', async (req, res) => {
     const qrCodeData = JSON.stringify({
       medicineId,
       batchNumber
-    });
+   });
     if (new Date(manufacturingDate) >= new Date(expiryDate)) return res.status(400).json({ error: 'Manufacturing date must be before expiry date' });
     if (await Medicine.exists({ $or: [{ medicineId }, { batchNumber }] })) return res.status(409).json({ error: 'A medicine with that medicine ID or batch already exists' });
 
@@ -98,122 +98,25 @@ router.get('/:id', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-
   try {
-
     const medicine = await Medicine.findById(req.params.id);
+    if (!medicine) return res.status(404).json({ error: 'Medicine not found' });
+    const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => editableFields.includes(key)));
+    if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No editable fields provided' });
+    if (updates.status && !statusValues.includes(updates.status)) return res.status(400).json({ error: `Status must be one of: ${statusValues.join(', ')}` });
+    if (updates.manufacturingDate && updates.expiryDate && new Date(updates.manufacturingDate) >= new Date(updates.expiryDate)) return res.status(400).json({ error: 'Manufacturing date must be before expiry date' });
 
-    if (!medicine) {
-      return res.status(404).json({
-        error: 'Medicine not found'
-      });
+    if (updates.status && updates.status !== medicine.status) {
+      const chainResult = await blockchain.updateStatus(medicine.batchNumber, statusNumbers[updates.status]);
+      if (!chainResult.success) return res.status(503).json({ error: 'Blockchain status update failed', details: chainResult.error });
+      updates.blockchainTransactionHash = chainResult.transactionHash;
+      updates.blockchainBlockNumber = chainResult.blockNumber;
     }
-
-    const updates = Object.fromEntries(
-      Object.entries(req.body).filter(([key]) =>
-        editableFields.includes(key)
-      )
-    );
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({
-        error: 'No editable fields provided'
-      });
-    }
-
-    if (
-      updates.status &&
-      !statusValues.includes(updates.status)
-    ) {
-      return res.status(400).json({
-        error: `Status must be one of: ${statusValues.join(', ')}`
-      });
-    }
-
-    // Enforce valid medicine status transitions
-    if (
-      updates.status &&
-      updates.status !== medicine.status
-    ) {
-
-      const allowedTransitions = {
-        Manufactured: ['InTransit'],
-        InTransit: ['Stored'],
-        Stored: ['Sold'],
-        Sold: [],
-        Expired: [],
-        Recalled: []
-      };
-
-      const allowedNextStatuses =
-        allowedTransitions[medicine.status] || [];
-
-      if (!allowedNextStatuses.includes(updates.status)) {
-        return res.status(400).json({
-          error: `Invalid status transition: ${medicine.status} → ${updates.status}`
-        });
-      }
-    }
-
-    if (
-      updates.manufacturingDate &&
-      updates.expiryDate &&
-      new Date(updates.manufacturingDate) >=
-      new Date(updates.expiryDate)
-    ) {
-      return res.status(400).json({
-        error: 'Manufacturing date must be before expiry date'
-      });
-    }
-
-    if (
-      updates.status &&
-      updates.status !== medicine.status
-    ) {
-
-      const chainResult = await blockchain.updateStatus(
-        medicine.batchNumber,
-        statusNumbers[updates.status]
-      );
-
-      if (!chainResult.success) {
-        return res.status(503).json({
-          error: 'Blockchain status update failed',
-          details: chainResult.error
-        });
-      }
-
-      updates.blockchainTransactionHash =
-        chainResult.transactionHash;
-
-      updates.blockchainBlockNumber =
-        chainResult.blockNumber;
-    }
-
     Object.assign(medicine, updates);
-
     await medicine.save();
-
-    logger.info('medicine.updated', {
-      id: medicine._id,
-      fields: Object.keys(updates),
-      batchNumber: medicine.batchNumber
-    });
-
-    res.json({
-      message: 'Medicine updated successfully',
-      medicine
-    });
-
-  } catch (error) {
-
-    sendError(
-      res,
-      error,
-      'Failed to update medicine'
-    );
-
-  }
+    logger.info('medicine.updated', { id: medicine._id, fields: Object.keys(updates), batchNumber: medicine.batchNumber });
+    res.json({ message: 'Medicine updated successfully', medicine });
+  } catch (error) { sendError(res, error, 'Failed to update medicine'); }
 });
 
 router.delete('/:id', async (req, res) => {
@@ -259,16 +162,16 @@ router.get('/verify/:medicineId', async (req, res) => {
     // 2. Check medicine on blockchain
     const blockchainIdResult = await blockchain.getMedicineById(medicineId);
 
-    // Medicine does not exist on blockchain
+    // Medicine does not exist in blockchain
     if (!blockchainIdResult.success || !blockchainIdResult.registered) {
       await VerificationHistory.create({
-        medicineId,
-        medicineName: medicine?.name || 'Unknown medicine',
-        batchNumber: medicine?.batchNumber || 'Unknown',
-        manufacturer: medicine?.manufacturer || 'Unknown',
-        result: 'COUNTERFEIT',
-        verifiedAt: new Date()
-      });
+       medicineId,
+       medicineName: medicine?.name || 'Unknown medicine',
+       batchNumber: medicine?.batchNumber || 'Unknown',
+       manufacturer: medicine?.manufacturer || 'Unknown',
+       result: 'COUNTERFEIT',
+       verifiedAt: new Date()
+    });
 
       return res.json({
         result: 'COUNTERFEIT',
@@ -277,9 +180,7 @@ router.get('/verify/:medicineId', async (req, res) => {
         checks: {
           registered: false,
           blockchainMatch: false,
-          notExpired: medicine
-            ? new Date(medicine.expiryDate) > new Date()
-            : false,
+          notExpired: medicine ? new Date(medicine.expiryDate) > new Date() : false,
           validStatus: false,
           validOwner: false,
           duplicateScan: false
@@ -295,16 +196,16 @@ router.get('/verify/:medicineId', async (req, res) => {
 
     if (!medicine) {
       await VerificationHistory.create({
-        medicineId,
-        medicineName: 'Unknown medicine',
-        batchNumber: batchNumber || 'Unknown',
-        manufacturer: 'Unknown',
-        result: 'SUSPICIOUS',
-        verifiedAt: new Date()
-      });
+      medicineId,
+      medicineName: 'Unknown medicine',
+      batchNumber: batchNumber || 'Unknown',
+      manufacturer: 'Unknown',
+      result: 'SUSPICIOUS',
+      verifiedAt: new Date()
+    });
 
-      return res.json({
-        result: 'SUSPICIOUS',
+    return res.json({
+    result: 'SUSPICIOUS',
         medicine: null,
         blockchain: blockchainResult,
         checks: {
@@ -312,10 +213,7 @@ router.get('/verify/:medicineId', async (req, res) => {
           blockchainMatch: false,
           notExpired: true,
           validStatus: true,
-          validOwner: Boolean(
-            blockchainResult.success &&
-            blockchainResult.data?.currentOwner
-          ),
+          validOwner: true,
           duplicateScan: false
         }
       });
@@ -323,13 +221,11 @@ router.get('/verify/:medicineId', async (req, res) => {
 
     // 5. Compare MongoDB and blockchain batch
     const blockchainMatch =
-      medicine.batchNumber === batchNumber &&
-      blockchainResult.success === true;
+    medicine.batchNumber === batchNumber &&
+    blockchainResult.success === true;
 
     // 6. Check expiry
-    const notExpired =
-      medicine.expiryDate &&
-      new Date(medicine.expiryDate) > new Date();
+    const notExpired = new Date(medicine.expiryDate) > new Date();
 
     // 7. Check medicine status
     const validStatuses = [
@@ -341,24 +237,7 @@ router.get('/verify/:medicineId', async (req, res) => {
 
     const validStatus = validStatuses.includes(medicine.status);
 
-    // 8. Check blockchain ownership
-    const currentOwner = blockchainResult.data?.currentOwner;
-
-    const validOwner =
-      typeof currentOwner === 'string' &&
-      /^0x[a-fA-F0-9]{40}$/.test(currentOwner);
-
-    // 9. Check whether the medicine was verified recently
-    const duplicateWindow = new Date(Date.now() - 5 * 60 * 1000);
-
-    const recentScan = await VerificationHistory.findOne({
-      medicineId,
-      verifiedAt: { $gte: duplicateWindow }
-    });
-
-    const duplicateScan = Boolean(recentScan);
-
-    // 10. Determine final result
+    // 8. Determine final result
     let result = 'AUTHENTIC';
 
     if (!blockchainMatch) {
@@ -367,21 +246,17 @@ router.get('/verify/:medicineId', async (req, res) => {
       result = 'SUSPICIOUS';
     } else if (!validStatus) {
       result = 'SUSPICIOUS';
-    } else if (!validOwner) {
-      result = 'SUSPICIOUS';
     }
 
-    // 11. Save verification history
     await VerificationHistory.create({
-      medicineId: medicine.medicineId,
-      medicineName: medicine.name,
-      batchNumber: medicine.batchNumber,
-      manufacturer: medicine.manufacturer,
-      result,
-      verifiedAt: new Date()
+    medicineId: medicine.medicineId,
+    medicineName: medicine.name,
+    batchNumber: medicine.batchNumber,
+    manufacturer: medicine.manufacturer,
+    result,
+    verifiedAt: new Date()
     });
 
-    // 12. Return verification result
     return res.json({
       result,
       medicine,
@@ -391,8 +266,8 @@ router.get('/verify/:medicineId', async (req, res) => {
         blockchainMatch,
         notExpired,
         validStatus,
-        validOwner,
-        duplicateScan
+        validOwner: true,
+        duplicateScan: false
       }
     });
 
