@@ -80,6 +80,19 @@ const medicineSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  manufacturerWallet: {
+    type: String,
+    default: ''
+  },
+  distributorWallet: {
+    type: String,
+    default: ''
+  },
+  retailerWallet: {
+    type: String,
+    default: ''
+  },
+
   orderDate: {
     type: Date
   },

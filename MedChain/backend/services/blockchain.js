@@ -94,6 +94,27 @@ class BlockchainService {
     }
   }
 
+  getSignerForRole(role) {
+    const privateKeys = {
+      manufacturer: process.env.MANUFACTURER_PRIVATE_KEY,
+      distributor: process.env.DISTRIBUTOR_PRIVATE_KEY,
+      retailer: process.env.RETAILER_PRIVATE_KEY
+    };
+
+    const privateKey = privateKeys[role];
+
+    if (!privateKey) {
+      throw new Error(
+        `Private key not configured for role: ${role}`
+      );
+    }
+
+    return new ethers.Wallet(
+      privateKey,
+      this.provider
+    );
+  }
+
   resetSignerNonce() {
     if (this.provider && process.env.PRIVATE_KEY) {
       this.signer = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
@@ -116,15 +137,15 @@ class BlockchainService {
     try {
       this.resetSignerNonce();
       const tx = await this.contract.registerMedicine(
-      medicineData.medicineId,
-      medicineData.name,
-      medicineData.manufacturer,
-      Math.floor(new Date(medicineData.manufacturingDate).getTime() / 1000),
-      Math.floor(new Date(medicineData.expiryDate).getTime() / 1000),
-      medicineData.batchNumber,
-      medicineData.currentLocation,
-      await this.getWriteOverrides()
-    );
+        medicineData.medicineId,
+        medicineData.name,
+        medicineData.manufacturer,
+        Math.floor(new Date(medicineData.manufacturingDate).getTime() / 1000),
+        Math.floor(new Date(medicineData.expiryDate).getTime() / 1000),
+        medicineData.batchNumber,
+        medicineData.currentLocation,
+        await this.getWriteOverrides()
+      );
 
       const receipt = await tx.wait();
       logger.info('blockchain.medicine_registered', { batchNumber: medicineData.batchNumber, transactionHash: receipt.hash, blockNumber: receipt.blockNumber });
@@ -140,13 +161,14 @@ class BlockchainService {
     }
   }
 
-  async transferMedicine(batchNumber, newOwner, newLocation) {
+  async transferMedicine(batchNumber, newOwner, newLocation, role) {
     if (!this.isInitialized) {
       await this.initialize();
     }
 
     try {
-      this.resetSignerNonce();
+      this.signer = this.getSignerForRole(role);
+      this.contract = this.contract.connect(this.signer);
       const tx = await this.contract.transferMedicine(
         batchNumber,
         newOwner,
@@ -246,22 +268,22 @@ class BlockchainService {
     if (!this.isInitialized) await this.initialize();
 
     try {
-    const result = await this.contract.getMedicineById(medicineId);
+      const result = await this.contract.getMedicineById(medicineId);
 
       return {
-      success: true,
-      registered: result.registered,
-      batchNumber: result.batchNumber
+        success: true,
+        registered: result.registered,
+        batchNumber: result.batchNumber
       };
-      } catch (error) {
+    } catch (error) {
       logger.error('blockchain.medicine_id_lookup_failed', {
-       medicineId,
-       error: error.message
-    });
+        medicineId,
+        error: error.message
+      });
 
-    return {
-      success: false,
-      error: error.message
+      return {
+        success: false,
+        error: error.message
       };
     }
   }

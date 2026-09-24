@@ -22,7 +22,8 @@
     "express": "^4.18.2",
     "mongoose": "^8.0.3",
     "mssql": "^12.5.0",
-    "mysql2": "^3.22.3"
+    "mysql2": "^3.22.3",
+    "razorpay": "^2.9.8"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.0",

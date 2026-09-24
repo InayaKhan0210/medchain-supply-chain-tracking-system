@@ -744,11 +744,19 @@ function Manufacturer({ user }) {
       [key]: event.target.value,
     })
   }
-
   useEffect(() => {
     fetch(`${API_URL}/medicines`)
       .then((res) => res.json())
-      .then(setMedicines)
+      .then((data) => {
+        console.log('Medicines:', data)
+
+        setMedicines(data)
+
+        const userMedicines = filterUserMedicines(data)
+
+        setOrders(userMedicines)
+        setInventory(userMedicines)
+      })
       .catch(() => { })
   }, [])
 
@@ -1007,6 +1015,7 @@ function SupplyDashboard({ user, retailer = false }) {
   const [orders, setOrders] = useState([])
   const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(false)
+  const [paymentDone, setPaymentDone] = useState(false)
 
   const filterUserMedicines = (data) => {
     return data.filter((m) =>
@@ -1020,6 +1029,7 @@ function SupplyDashboard({ user, retailer = false }) {
     fetch(`${API_URL}/medicines`)
       .then((res) => res.json())
       .then((data) => {
+        console.log('Medicines:', data)
         setMedicines(data)
 
         const userMedicines = filterUserMedicines(data)
@@ -1028,10 +1038,10 @@ function SupplyDashboard({ user, retailer = false }) {
         setInventory(userMedicines)
       })
       .catch(() => { })
-  }, [user.email, retailer])
+  }, [])
 
   const placeOrder = async () => {
-    if (!selected || !quantity) return
+    if (!selected || !quantity || !paymentDone) return
 
     setLoading(true)
 
@@ -1063,6 +1073,7 @@ function SupplyDashboard({ user, retailer = false }) {
       setShowOrder(false)
       setSelected(null)
       setQuantity('')
+      setPaymentDone(false)
 
       const data = await fetch(
         `${API_URL}/medicines`
@@ -1202,6 +1213,8 @@ function SupplyDashboard({ user, retailer = false }) {
               setQuantity={setQuantity}
               loading={loading}
               placeOrder={placeOrder}
+              paymentDone={paymentDone}
+              setPaymentDone={setPaymentDone}
             />
           )}
 
@@ -1265,7 +1278,6 @@ function SupplyDashboard({ user, retailer = false }) {
     </>
   )
 }
-
 function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
   const [history, setHistory] = useState({})
   const [historyLoading, setHistoryLoading] = useState(null)
@@ -1274,12 +1286,10 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
 
   const loadBlockchainHistory = async (medicineId) => {
     setHistoryLoading(medicineId)
-
     try {
       const response = await fetch(
         `${API_URL}/medicines/${medicineId}/history`
       )
-
       const data = await response.json()
 
       if (!response.ok) {
@@ -1304,12 +1314,10 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
 
   const loadBlockchainComparison = async (medicineId) => {
     setComparisonLoading(medicineId)
-
     try {
       const response = await fetch(
         `${API_URL}/medicines/${medicineId}/blockchain`
       )
-
       const data = await response.json()
 
       if (!response.ok) {
@@ -1331,7 +1339,6 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
       setComparisonLoading(null)
     }
   }
-
 
   return (
     <div>
@@ -1368,7 +1375,6 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
               <div
                 className="grid grid-cols-2 gap-3 border-b border-slate-100 px-5 py-4 text-sm last:border-0 md:grid-cols-[1.4fr_1fr_.7fr_.7fr_.8fr]"
               >
-
                 <span className="font-semibold">
                   {item.name}
                 </span>
@@ -1420,10 +1426,10 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
                     Mark as sold
                   </Button>
                 )}
-
               </div>
 
               <div className="flex gap-3 border-b border-slate-100 px-5 py-3">
+
                 <Button
                   variant="ghost"
                   onClick={() =>
@@ -1451,6 +1457,7 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
                     ? 'Checking...'
                     : 'Check blockchain integrity'}
                 </Button>
+
               </div>
 
               {history[item._id] && (
@@ -1471,6 +1478,7 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
                           >
 
                             <div className="flex items-center justify-between">
+
                               <span className="font-semibold">
                                 {entry.status ||
                                   entry.action ||
@@ -1484,6 +1492,7 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
                                   ).toLocaleString()
                                   : ''}
                               </span>
+
                             </div>
 
                             {entry.location && (
@@ -1522,6 +1531,7 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
 
               {comparison[item._id] && (
                 <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+
                   <h3 className="font-semibold">
                     Database ↔ Blockchain Integrity
                   </h3>
@@ -1529,55 +1539,104 @@ function Inventory({ items, retailer, onOrder, onStatusUpdate }) {
                   <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
 
                     {[
-                      ['Medicine ID', comparison[item._id].database?.medicineId, comparison[item._id].database?.blockchainId],
-                      ['Medicine Name', comparison[item._id].database?.name, comparison[item._id].blockchain?.name],
-                      ['Manufacturer', comparison[item._id].database?.manufacturer, comparison[item._id].blockchain?.manufacturer],
-                      ['Batch Number', comparison[item._id].database?.batchNumber, item.batchNumber],
-                      ['Manufacturing Date', comparison[item._id].database?.manufacturingDate, comparison[item._id].blockchain?.manufacturingDate],
-                      ['Expiry Date', comparison[item._id].database?.expiryDate, comparison[item._id].blockchain?.expiryDate],
-                      ['Status', comparison[item._id].database?.status, comparison[item._id].blockchain?.status],
-                      ['Storage Conditions', comparison[item._id].database?.storageConditions, comparison[item._id].blockchain?.currentLocation],
-                    ].map(([label, databaseValue, blockchainValue]) => {
-                      const match =
-                        String(databaseValue ?? '') ===
-                        String(blockchainValue ?? '')
+                      [
+                        'Medicine ID',
+                        comparison[item._id].database?.medicineId,
+                        comparison[item._id].database?.blockchainId
+                      ],
+                      [
+                        'Medicine Name',
+                        comparison[item._id].database?.name,
+                        comparison[item._id].blockchain?.name
+                      ],
+                      [
+                        'Manufacturer',
+                        comparison[item._id].database?.manufacturer,
+                        comparison[item._id].blockchain?.manufacturer
+                      ],
+                      [
+                        'Batch Number',
+                        comparison[item._id].database?.batchNumber,
+                        item.batchNumber
+                      ],
+                      [
+                        'Manufacturing Date',
+                        comparison[item._id].database?.manufacturingDate,
+                        comparison[item._id].blockchain?.manufacturingDate
+                      ],
+                      [
+                        'Expiry Date',
+                        comparison[item._id].database?.expiryDate,
+                        comparison[item._id].blockchain?.expiryDate
+                      ],
+                      [
+                        'Status',
+                        comparison[item._id].database?.status,
+                        comparison[item._id].blockchain?.status
+                      ],
+                      [
+                        'Storage Conditions',
+                        comparison[item._id].database?.storageConditions,
+                        comparison[item._id].blockchain?.currentLocation
+                      ],
+                    ].map(
+                      ([
+                        label,
+                        databaseValue,
+                        blockchainValue
+                      ]) => {
 
-                      return (
-                        <div
-                          key={label}
-                          className="flex items-center justify-between gap-4 border-b border-slate-100 py-3 last:border-0"
-                        >
-                          <span className="text-sm font-medium text-slate-600">
-                            {label}
-                          </span>
+                        const match =
+                          String(databaseValue ?? '') ===
+                          String(blockchainValue ?? '')
 
-                          <span
-                            className={`text-sm font-semibold ${match
+                        return (
+                          <div
+                            key={label}
+                            className="flex items-center justify-between gap-4 border-b border-slate-100 py-3 last:border-0"
+                          >
+
+                            <span className="text-sm font-medium text-slate-600">
+                              {label}
+                            </span>
+
+                            <span
+                              className={`text-sm font-semibold ${match
                                 ? 'text-emerald-600'
                                 : 'text-red-600'
-                              }`}
-                          >
-                            {match ? '✓ Match' : '✗ Mismatch'}
-                          </span>
-                        </div>
-                      )
-                    })}
+                                }`}
+                            >
+                              {match
+                                ? '✓ Match'
+                                : '✗ Mismatch'}
+                            </span>
+
+                          </div>
+                        )
+                      }
+                    )}
 
                     <div className="mt-4 border-t border-slate-100 pt-4">
+
                       <p className="text-xs text-slate-400">
-                        Blockchain network: {comparison[item._id].database?.blockchainNetwork || '—'}
+                        Blockchain network:{' '}
+                        {comparison[item._id].database?.blockchainNetwork || '—'}
                       </p>
 
                       <p className="mt-1 break-all text-xs text-slate-400">
-                        Transaction: {comparison[item._id].database?.blockchainTransactionHash || '—'}
+                        Transaction:{' '}
+                        {comparison[item._id].database?.blockchainTransactionHash || '—'}
                       </p>
 
                       <p className="mt-1 text-xs text-slate-400">
-                        Block: {comparison[item._id].database?.blockchainBlockNumber ?? '—'}
+                        Block:{' '}
+                        {comparison[item._id].database?.blockchainBlockNumber ?? '—'}
                       </p>
+
                     </div>
 
                   </div>
+
                 </div>
               )}
 
@@ -1601,7 +1660,156 @@ function Catalog({
   setQuantity,
   loading,
   placeOrder,
+  paymentDone,
+  setPaymentDone,
 }) {
+  const totalAmount =
+    selected && quantity
+      ? Number(selected.price || 0) * Number(quantity)
+      : 0
+  const handlePayment = async () => {
+    if (!selected || !quantity) {
+      alert('Please select a medicine and enter quantity.')
+      return
+    }
+
+    const requestedQuantity = Number(quantity)
+
+    if (
+      !Number.isInteger(requestedQuantity) ||
+      requestedQuantity <= 0
+    ) {
+      alert('Please enter a valid quantity.')
+      return
+    }
+
+    if (requestedQuantity > Number(selected.quantity || 0)) {
+      alert('Requested quantity exceeds available stock.')
+      return
+    }
+
+    try {
+      const response = await fetch(
+        'http://localhost:5000/api/medicines/payment/create-order',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            amount: totalAmount,
+            medicineId: selected._id,
+            quantity: requestedQuantity
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Failed to create payment order'
+        )
+      }
+
+      const options = {
+        key: 'rzp_test_TfptvIkxuI0DOj',
+        amount: data.amount,
+        currency: data.currency,
+        name: 'MedChain',
+        description: `${selected.name} × ${requestedQuantity}`,
+        order_id: data.id,
+        handler: async function (paymentResponse) {
+          try {
+            const verifyResponse = await fetch(
+              'http://localhost:5000/api/medicines/payment/verify',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  razorpay_order_id:
+                    paymentResponse.razorpay_order_id,
+
+                  razorpay_payment_id:
+                    paymentResponse.razorpay_payment_id,
+
+                  razorpay_signature:
+                    paymentResponse.razorpay_signature
+                })
+              }
+            )
+
+            const verifyData = await verifyResponse.json()
+
+            if (!verifyResponse.ok || !verifyData.verified) {
+              throw new Error(
+                verifyData.error || 'Payment verification failed'
+              )
+            }
+
+            console.log(
+              'Razorpay payment verified:',
+              paymentResponse.razorpay_payment_id
+            )
+
+            setPaymentDone(true)
+          } catch (error) {
+            console.error(
+              'Payment verification error:',
+              error
+            )
+
+            alert(
+              error.message ||
+              'Payment verification failed.'
+            )
+          }
+        },
+
+        prefill: {
+          name: 'MedChain User'
+        },
+
+        theme: {
+          color: '#25c79a'
+        },
+
+        modal: {
+          ondismiss: function () {
+            console.log('Razorpay payment window closed')
+          }
+        }
+      }
+
+      const razorpay = new window.Razorpay(options)
+
+      razorpay.on('payment.failed', function (response) {
+        console.error('RAZORPAY PAYMENT FAILED')
+        console.error('Code:', response.error.code)
+        console.error('Description:', response.error.description)
+        console.error('Source:', response.error.source)
+        console.error('Step:', response.error.step)
+        console.error('Reason:', response.error.reason)
+        console.error('Order ID:', response.error.metadata?.order_id)
+        console.error('Payment ID:', response.error.metadata?.payment_id)
+
+        alert(
+          `Payment Failed\n\n${response.error.description || 'Unknown Razorpay error'}`
+        )
+      })
+
+      razorpay.open()
+
+
+    } catch (error) {
+      console.error('Payment error:', error)
+      alert(error.message || 'Payment could not be started.')
+    }
+  }
+
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -1617,7 +1825,10 @@ function Catalog({
 
         <Button
           variant="mint"
-          onClick={() => setShowOrder(!showOrder)}
+          onClick={() => {
+            setPaymentDone(false)
+            setShowOrder(!showOrder)
+          }}
         >
           {showOrder ? 'Cancel' : 'Place an order'} →
         </Button>
@@ -1627,17 +1838,17 @@ function Catalog({
         <div className="mt-6 rounded-2xl border border-mint/30 bg-mint/5 p-5">
           <p className="font-semibold">Build an order</p>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px_auto]">
+          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px]">
             <select
               value={selected?._id || ''}
-              onChange={(e) =>
+              onChange={(e) => {
                 setSelected(
                   medicines.find(
-                    (item) =>
-                      item._id === e.target.value
+                    (item) => item._id === e.target.value
                   )
                 )
-              }
+                setPaymentDone(false)
+              }}
               className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
             >
               <option value="">Select a medicine</option>
@@ -1654,21 +1865,85 @@ function Catalog({
               min="1"
               placeholder="Quantity"
               value={quantity}
-              onChange={(e) =>
+              onChange={(e) => {
                 setQuantity(e.target.value)
-              }
+                setPaymentDone(false)
+              }}
               className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
             />
-
-            <Button
-              onClick={placeOrder}
-              disabled={loading || !selected}
-            >
-              {loading
-                ? 'Processing...'
-                : 'Confirm order'}
-            </Button>
           </div>
+
+          {selected && quantity && (
+            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-sm font-semibold text-slate-700">
+                Order Summary
+              </p>
+
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">
+                    Medicine
+                  </span>
+                  <span className="font-semibold">
+                    {selected.name}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-slate-500">
+                    Quantity
+                  </span>
+                  <span className="font-semibold">
+                    {quantity} units
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-slate-500">
+                    Price per unit
+                  </span>
+                  <span className="font-semibold">
+                    ₹{selected.price || 0}
+                  </span>
+                </div>
+
+                <div className="flex justify-between border-t border-slate-100 pt-3 text-base">
+                  <span className="font-bold">
+                    Total Amount
+                  </span>
+                  <span className="font-bold text-emerald-600">
+                    ₹{totalAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                {!paymentDone ? (
+                  <Button
+                    onClick={handlePayment}
+                    disabled={loading}
+                  >
+                    Pay ₹{totalAmount.toFixed(2)}
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
+                      ✓ Payment successful
+                    </div>
+
+                    <Button
+                      onClick={placeOrder}
+                      disabled={loading}
+                    >
+                      {loading
+                        ? 'Processing...'
+                        : 'Confirm order'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1678,6 +1953,8 @@ function Catalog({
             <button
               onClick={() => {
                 setSelected(item)
+                setQuantity('')
+                setPaymentDone(false)
                 setShowOrder(true)
               }}
               key={item._id}
@@ -1707,7 +1984,7 @@ function Catalog({
                 </span>
 
                 <span className="font-bold">
-                  ${item.price || 0} / unit
+                  ₹{item.price || 0} / unit
                 </span>
               </div>
             </button>
@@ -2303,6 +2580,18 @@ function Consumer() {
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              {selected.qrCodeData && (
+                <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-center">
+                  <p className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">
+                    Medicine QR Code
+                  </p>
+                  <QRCodeSVG
+                    value={selected.qrCodeData}
+                    size={200}
+                    className="mx-auto h-auto max-w-full"
+                  />
+                </div>
+              )}
               {[
                 ['Manufacturer', selected.manufacturer],
                 ['Blockchain ID', selected.blockchainId],
