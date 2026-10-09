@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 
+
 const verificationHistorySchema = new mongoose.Schema({
   medicineId: {
     type: String,

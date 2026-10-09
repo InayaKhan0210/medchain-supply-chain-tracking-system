@@ -1,21 +1,692 @@
 @import "tailwindcss";
 
-:root { font-family: 'DM Sans', sans-serif; color: #cf008a; background: #f5f7fa; font-synthesis: none; }
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; }
-button, input, select, textarea { font: inherit; }
-button { cursor: pointer; }
-.mesh { background-image: linear-gradient(rgba(99, 212, 232, .07) 1px, transparent 1px), linear-gradient(90deg, rgba(99, 212, 232, .07) 1px, transparent 1px); background-size: 36px 36px; }
-.grain { position: relative; }
-.grain::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .18; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E"); }
-.animate-in { animation: rise .5s ease both; }
-@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.qr-reader video { border-radius: 12px; }
+/* =========================================================
+   BASE
+   ========================================================= */
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  background: #0f172a;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--page-bg);
+  color: var(--text-main);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   LIGHT THEME
+   ========================================================= */
+
+.theme-light {
+  --page-bg: #f9fafb;
+
+  --surface: #ffffff;
+  --surface-soft: #f3f4f6;
+  --surface-muted: #e5e7eb;
+
+  --text-main: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+
+  /* Pale medical blue */
+  --primary: #6fa8d0;
+  --primary-dark: #5b91b8;
+  --primary-soft: #eaf4fa;
+
+  /* Healing teal */
+  --secondary: #00a896;
+  --secondary-dark: #008f80;
+  --secondary-soft: #e6f7f5;
+
+  /* Alerts */
+  --danger-soft: #fef2f2;
+  --danger-text: #ef4444;
+
+  /* Success */
+  --success-soft: #ecfdf5;
+  --success-text: #10b981;
+
+  min-height: 100vh;
+  background-color: var(--page-bg);
+  color: var(--text-main);
+
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+
+/* =========================================================
+   DARK THEME
+   ========================================================= */
+
+.theme-dark {
+  --page-bg: #0f172a;
+
+  --surface: #1e293b;
+  --surface-soft: #263449;
+  --surface-muted: #334155;
+
+  --text-main: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  --border: #334155;
+  --border-strong: #475569;
+
+  /* Sky blue */
+  --primary: #38bdf8;
+  --primary-dark: #0ea5e9;
+  --primary-soft: #12354a;
+
+  /* Bright teal */
+  --secondary: #2dd4bf;
+  --secondary-dark: #14b8a6;
+  --secondary-soft: #123b3a;
+
+  /* Alerts */
+  --danger-soft: #3a2024;
+  --danger-text: #f87171;
+
+  /* Success */
+  --success-soft: #12372c;
+  --success-text: #34d399;
+
+  min-height: 100vh;
+  background-color: var(--page-bg);
+  color: var(--text-main);
+
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+
+/* =========================================================
+   GLOBAL THEME
+   ========================================================= */
+
+.theme-light,
+.theme-dark {
+  min-height: 100vh;
+  background-color: var(--page-bg);
+  color: var(--text-main);
+}
+
+
+/* =========================================================
+   DARK COMMON TAILWIND OVERRIDES
+   ========================================================= */
+
+.theme-dark .bg-white {
+  background-color: var(--surface) !important;
+}
+
+.theme-dark .bg-slate-50 {
+  background-color: var(--surface-soft) !important;
+}
+
+.theme-dark .bg-slate-100 {
+  background-color: var(--surface-muted) !important;
+}
+
+.theme-dark .text-ink {
+  color: var(--text-main) !important;
+}
+
+.theme-dark .text-slate-700,
+.theme-dark .text-slate-600 {
+  color: var(--text-secondary) !important;
+}
+
+.theme-dark .text-slate-500 {
+  color: var(--text-secondary) !important;
+}
+
+.theme-dark .text-slate-400 {
+  color: var(--text-muted) !important;
+}
+
+.theme-dark .text-slate-300 {
+  color: #aebdca !important;
+}
+
+.theme-dark .border-slate-100,
+.theme-dark .border-slate-200 {
+  border-color: var(--border) !important;
+}
+
+.theme-dark .border-slate-300 {
+  border-color: var(--border-strong) !important;
+}
+
+.theme-dark .hover\:bg-slate-50:hover {
+  background-color: var(--surface-soft) !important;
+}
+
+.theme-dark .hover\:bg-slate-100:hover {
+  background-color: var(--surface-muted) !important;
+}
+
+
+/* =========================================================
+   INPUTS / SELECTS / TEXTAREAS
+   ========================================================= */
+
+.theme-light input,
+.theme-light select,
+.theme-light textarea {
+  background-color: var(--surface);
+  color: var(--text-main);
+  border-color: var(--border-strong);
+}
+
+.theme-dark input,
+.theme-dark select,
+.theme-dark textarea {
+  background-color: var(--surface) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-strong) !important;
+}
+
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.theme-dark input::placeholder,
+.theme-dark textarea::placeholder {
+  color: #718396 !important;
+}
+
+.theme-dark option {
+  background-color: var(--surface);
+  color: var(--text-main);
+}
+
+
+/* =========================================================
+   INK
+   ========================================================= */
+
+.theme-light .bg-ink {
+  background-color: #1f2937 !important;
+}
+
+.theme-dark .bg-ink {
+  background-color: #1e293b !important;
+}
+
+.theme-light .text-ink {
+  color: #1f2937 !important;
+}
+
+.theme-dark .text-ink {
+  color: #f8fafc !important;
+}
+
+
+/* =========================================================
+   PRIMARY BLUE
+   Redirect existing bg-mint branding to blue
+   ========================================================= */
+
+.theme-light .bg-mint {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+.theme-dark .bg-mint {
+  background-color: var(--primary) !important;
+  color: #0f172a !important;
+}
+
+.theme-light .text-mint {
+  color: var(--primary) !important;
+}
+
+.theme-dark .text-mint {
+  color: var(--primary) !important;
+}
+
+
+/* =========================================================
+   PRIMARY BLUE HOVER
+   ========================================================= */
+
+.theme-light .hover\:bg-\[\#39d5aa\]:hover {
+  background-color: var(--primary-dark) !important;
+}
+
+.theme-dark .hover\:bg-\[\#39d5aa\]:hover {
+  background-color: var(--primary-dark) !important;
+}
+
+
+/* =========================================================
+   EMERALD — SUCCESS / VERIFIED ONLY
+   ========================================================= */
+
+.theme-light .bg-emerald-50 {
+  background-color: var(--success-soft) !important;
+}
+
+.theme-light .bg-emerald-100 {
+  background-color: #d1fae5 !important;
+}
+
+.theme-light .text-emerald-600 {
+  color: #059669 !important;
+}
+
+.theme-light .text-emerald-700 {
+  color: #047857 !important;
+}
+
+.theme-light .border-emerald-100 {
+  border-color: #a7f3d0 !important;
+}
+
+.theme-dark .bg-emerald-50 {
+  background-color: var(--success-soft) !important;
+}
+
+.theme-dark .bg-emerald-100 {
+  background-color: #194936 !important;
+}
+
+.theme-dark .text-emerald-600 {
+  color: var(--success-text) !important;
+}
+
+.theme-dark .text-emerald-700 {
+  color: #6ee7b7 !important;
+}
+
+.theme-dark .border-emerald-100 {
+  border-color: #286047 !important;
+}
+
+
+/* =========================================================
+   TEAL
+   ========================================================= */
+
+.theme-light .bg-teal-50 {
+  background-color: var(--secondary-soft) !important;
+}
+
+.theme-light .bg-teal-100 {
+  background-color: #ccfbf1 !important;
+}
+
+.theme-light .text-teal-600,
+.theme-light .text-teal-700 {
+  color: var(--secondary-dark) !important;
+}
+
+.theme-light .border-teal-100 {
+  border-color: #99f6e4 !important;
+}
+
+.theme-dark .bg-teal-50 {
+  background-color: var(--secondary-soft) !important;
+}
+
+.theme-dark .bg-teal-100 {
+  background-color: #164e4a !important;
+}
+
+.theme-dark .text-teal-600,
+.theme-dark .text-teal-700 {
+  color: var(--secondary) !important;
+}
+
+.theme-dark .border-teal-100 {
+  border-color: #23645f !important;
+}
+
+
+/* =========================================================
+   RED / DANGER
+   ========================================================= */
+
+.theme-light .bg-rose-50,
+.theme-light .bg-red-50 {
+  background-color: var(--danger-soft) !important;
+}
+
+.theme-light .bg-rose-100,
+.theme-light .bg-red-100 {
+  background-color: #fee2e2 !important;
+}
+
+.theme-light .text-rose-600,
+.theme-light .text-rose-700,
+.theme-light .text-red-600,
+.theme-light .text-red-700 {
+  color: var(--danger-text) !important;
+}
+
+.theme-light .border-rose-100,
+.theme-light .border-red-100 {
+  border-color: #fecaca !important;
+}
+
+.theme-dark .bg-rose-50,
+.theme-dark .bg-red-50 {
+  background-color: var(--danger-soft) !important;
+}
+
+.theme-dark .bg-rose-100,
+.theme-dark .bg-red-100 {
+  background-color: #4a282d !important;
+}
+
+.theme-dark .text-rose-600,
+.theme-dark .text-rose-700,
+.theme-dark .text-red-600,
+.theme-dark .text-red-700 {
+  color: var(--danger-text) !important;
+}
+
+.theme-dark .border-rose-100,
+.theme-dark .border-red-100 {
+  border-color: #66373d !important;
+}
+
+
+/* =========================================================
+   AMBER / WARNING
+   ========================================================= */
+
+.theme-light .bg-amber-50 {
+  background-color: #fffbeb !important;
+}
+
+.theme-light .bg-amber-100 {
+  background-color: #fef3c7 !important;
+}
+
+.theme-light .text-amber-600,
+.theme-light .text-amber-700 {
+  color: #d97706 !important;
+}
+
+.theme-light .border-amber-100 {
+  border-color: #fde68a !important;
+}
+
+.theme-dark .bg-amber-50 {
+  background-color: #3b321d !important;
+}
+
+.theme-dark .bg-amber-100 {
+  background-color: #4a3d20 !important;
+}
+
+.theme-dark .text-amber-600,
+.theme-dark .text-amber-700 {
+  color: #f5c76a !important;
+}
+
+.theme-dark .border-amber-100 {
+  border-color: #66552b !important;
+}
+
+
+/* =========================================================
+   BLUE UTILITY CLASSES
+   ========================================================= */
+
+.theme-light .bg-blue-50 {
+  background-color: #eef7fc !important;
+}
+
+.theme-light .bg-blue-100 {
+  background-color: #dceef8 !important;
+}
+
+.theme-light .text-blue-600,
+.theme-light .text-blue-700 {
+  color: #5b91b8 !important;
+}
+
+.theme-light .border-blue-100 {
+  border-color: #c4dfef !important;
+}
+
+.theme-dark .bg-blue-50 {
+  background-color: #12354a !important;
+}
+
+.theme-dark .bg-blue-100 {
+  background-color: #16445f !important;
+}
+
+.theme-dark .text-blue-600,
+.theme-dark .text-blue-700 {
+  color: #38bdf8 !important;
+}
+
+.theme-dark .border-blue-100 {
+  border-color: #285c77 !important;
+}
+
+
+/* =========================================================
+   GRAY UTILITY CLASSES
+   ========================================================= */
+
+.theme-light .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+.theme-light .bg-gray-100 {
+  background-color: #f3f4f6 !important;
+}
+
+.theme-light .text-gray-500,
+.theme-light .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.theme-light .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+.theme-light .border-gray-100,
+.theme-light .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+
+.theme-dark .bg-gray-50 {
+  background-color: var(--surface-soft) !important;
+}
+
+.theme-dark .bg-gray-100 {
+  background-color: var(--surface-muted) !important;
+}
+
+.theme-dark .text-gray-500,
+.theme-dark .text-gray-600 {
+  color: var(--text-secondary) !important;
+}
+
+.theme-dark .text-gray-400 {
+  color: var(--text-muted) !important;
+}
+
+.theme-dark .border-gray-100,
+.theme-dark .border-gray-200 {
+  border-color: var(--border) !important;
+}
+
+
+/* =========================================================
+   EXISTING DASHBOARD BACKGROUND
+   ========================================================= */
+
+.theme-light .bg-\[\#f5f7fa\] {
+  background-color: var(--page-bg) !important;
+}
+
+.theme-dark .bg-\[\#f5f7fa\] {
+  background-color: var(--page-bg) !important;
+}
+
+
+/* =========================================================
+   OLD GREEN HOVER COLORS
+   ========================================================= */
+
+.theme-light .hover\:bg-\[\#39d5aa\]:hover,
+.theme-dark .hover\:bg-\[\#39d5aa\]:hover {
+  background-color: var(--primary-dark) !important;
+}
+
+.theme-light .hover\:bg-\[\#202d43\]:hover {
+  background-color: #111827 !important;
+}
+
+.theme-dark .hover\:bg-\[\#202d43\]:hover {
+  background-color: #334155 !important;
+}
+
+
+/* =========================================================
+   MESH
+   ========================================================= */
+
+.mesh {
+  background-image:
+    linear-gradient(rgba(111, 168, 208, 0.05) 1px,
+      transparent 1px),
+    linear-gradient(90deg,
+      rgba(111, 168, 208, 0.05) 1px,
+      transparent 1px);
+
+  background-size: 36px 36px;
+}
+
+.theme-dark .mesh {
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.025) 1px,
+      transparent 1px),
+    linear-gradient(90deg,
+      rgba(56, 189, 248, 0.025) 1px,
+      transparent 1px);
+}
+
+
+/* =========================================================
+   GRAIN
+   ========================================================= */
+
+.grain {
+  position: relative;
+}
+
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+}
+
+
+/* =========================================================
+   AUTH
+   ========================================================= */
 
 .signup-back:hover {
-  color: #260019;
+  color: var(--primary);
   text-decoration: underline;
 }
+
+
+/* =========================================================
+   QR SCANNER
+   ========================================================= */
+
+.qr-reader video {
+  border-radius: 12px;
+}
+
+
+/* =========================================================
+   ANIMATION
+   ========================================================= */
+
+.animate-in {
+  animation: rise 0.5s ease both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
 
 @media (max-width: 560px) {
   .signup-card {
@@ -23,4 +694,25 @@ button { cursor: pointer; }
     padding: 30px 22px;
     border-radius: 16px;
   }
+}
+
+/* ROLE SELECT */
+.theme-light select {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+.theme-dark select {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.theme-light select option {
+  background-color: #ffffff;
+  color: #1f2937;
+}
+
+.theme-dark select option {
+  background-color: #1e293b;
+  color: #f8fafc;
 }
